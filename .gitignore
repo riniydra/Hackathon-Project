@@ -1,0 +1,10 @@
+# root
+.env
+*.pyc
+__pycache__/
+.venv/
+node_modules/
+dist/
+.coverage
+.alembic/
+exports/

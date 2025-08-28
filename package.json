@@ -1,0 +1,17 @@
+{
+  "name": "dv-support-monorepo",
+  "private": true,
+  "workspaces": [
+    "apps/web"
+  ],
+  "scripts": {
+    "dev": "concurrently -n WEB,API -c green,blue \"pnpm --filter web dev\" \"powershell -ExecutionPolicy Bypass -File scripts/start_api.ps1\"",
+    "dev:api": "powershell -ExecutionPolicy Bypass -File scripts/start_api.ps1",
+    "dev:web": "pnpm --filter web dev",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down -v"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  }
+}

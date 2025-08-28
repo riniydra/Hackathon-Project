@@ -1,0 +1,15 @@
+weights:
+  mood_drop_7d: 0.25
+  safety_low: 0.35
+  negative_language: 0.20
+  missed_checkins: 0.10
+  game_telemetry_stress: 0.10
+thresholds:
+  warn: 0.45
+  high: 0.65
+features:
+  mood_drop_7d: "delta(mood, 7d) < -1.5"
+  safety_low: "avg(safety, 3d) < 3"
+  negative_language: "nlp.sentiment <= -0.5 or nlp.anger >= 0.6"
+  missed_checkins: "miss_rate(7d) >= 0.5"
+  game_telemetry_stress: "breath_irregularity >= 0.6"
