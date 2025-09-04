@@ -109,18 +109,19 @@ const InsightsPanel = forwardRef<InsightsPanelRef>((props, ref) => {
   return (
     <div style={{display:"grid", gap:16, maxWidth:600}}>
       <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
-        <h3>Risk Insights</h3>
+        <h3 style={{margin:0}}>Risk Insights</h3>
         <button 
           onClick={loadRiskData}
           disabled={riskLoading}
           style={{
-            padding:"4px 8px", 
+            padding:"6px 10px", 
             fontSize:12, 
             border:"1px solid #d1d5db", 
-            borderRadius:4, 
+            borderRadius:8, 
             backgroundColor:"#f9fafb",
             cursor: riskLoading ? "not-allowed" : "pointer",
-            opacity: riskLoading ? 0.6 : 1
+            opacity: riskLoading ? 0.7 : 1,
+            boxShadow: "0 4px 10px rgba(2,6,23,0.06)"
           }}
         >
           {riskLoading ? "🔄 Updating..." : "🔄 Refresh"}
@@ -128,7 +129,7 @@ const InsightsPanel = forwardRef<InsightsPanelRef>((props, ref) => {
       </div>
       
       {riskData ? (
-        <div style={{display:"grid", gap:12, padding:16, border:"1px solid #e5e7eb", borderRadius:8}}>
+        <div style={{display:"grid", gap:12, padding:16, border:"1px solid #e5e7eb", borderRadius:12, background:"#ffffff"}}>
           <div style={{display:"flex", alignItems:"center", gap:12}}>
             <div style={{
               width: 40,
@@ -186,7 +187,7 @@ const InsightsPanel = forwardRef<InsightsPanelRef>((props, ref) => {
         <button 
           onClick={handleExportTableau} 
           disabled={loading}
-          style={{padding:"8px 16px", border:"1px solid #d1d5db", borderRadius:4, backgroundColor:"#f9fafb"}}
+          style={{padding:"10px 14px", border:"1px solid #d1d5db", borderRadius:10, backgroundColor:"#f9fafb", boxShadow:"0 6px 14px rgba(2,6,23,0.06)"}}
         >
           {loading ? "Creating..." : "Export for Tableau"}
         </button>
@@ -194,7 +195,7 @@ const InsightsPanel = forwardRef<InsightsPanelRef>((props, ref) => {
         <button 
           onClick={handleExportFull} 
           disabled={loading}
-          style={{padding:"8px 16px", border:"1px solid #d1d5db", borderRadius:4, backgroundColor:"#f9fafb"}}
+          style={{padding:"10px 14px", border:"1px solid #d1d5db", borderRadius:10, backgroundColor:"#f9fafb", boxShadow:"0 6px 14px rgba(2,6,23,0.06)"}}
         >
           {loading ? "Creating..." : "Export Full Data"}
         </button>
@@ -208,11 +209,13 @@ const InsightsPanel = forwardRef<InsightsPanelRef>((props, ref) => {
               <div key={i} style={{
                 padding:8, 
                 border:"1px solid #e5e7eb", 
-                borderRadius:4, 
+                borderRadius:10, 
                 fontSize:14,
                 display:"flex",
                 justifyContent:"space-between",
-                alignItems:"center"
+                alignItems:"center",
+                background: "#ffffff",
+                boxShadow: "0 4px 12px rgba(2,6,23,0.05)"
               }}>
                 <div>
                   <div style={{fontWeight:"bold"}}>{exp.filename}</div>
