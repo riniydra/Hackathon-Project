@@ -5,8 +5,7 @@ export default function SafetyShell({ children }: { children: React.ReactNode })
   useEffect(() => {
     function handler(e: KeyboardEvent) {
       const cmdDot = (e.metaKey || e.ctrlKey) && e.key === ".";
-      const esc = e.key === "Escape";
-      if (cmdDot || esc) {
+      if (cmdDot) {
         // quick exit: navigate to neutral page
         window.location.href = "https://www.weather.com/"; // placeholder boss screen
       }
@@ -15,5 +14,5 @@ export default function SafetyShell({ children }: { children: React.ReactNode })
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  return <div style={{maxWidth:720, margin:"24px auto", padding:"0 16px"}}>{children}</div>;
+  return <div style={{width:"100%", height:"100%"}}>{children}</div>;
 }

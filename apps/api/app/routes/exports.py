@@ -236,3 +236,11 @@ def list_exports(user_id: str = Depends(get_current_user_id)):
                     })
     
     return {"exports": exports, "user_hash": user_hash}
+
+
+@router.post("/datacloud/ingest")
+def datacloud_ingest():
+    """Scaffold endpoint to forward curated tables to Salesforce Data Cloud Streaming API.
+    Real implementation will authenticate and push records.
+    """
+    return {"ok": True, "status": "scaffold"}

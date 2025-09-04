@@ -3,6 +3,7 @@ from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.orm import Session
 from ..db import get_db, engine, Base
 from .. import models
+from pydantic import BaseModel, Field
 from ..auth import hash_password, verify_password, set_session_user, clear_session, get_current_user_id
 
 # ensure tables exist
@@ -45,3 +46,43 @@ def logout(request: Request):
 def me(user_id: str = Depends(get_current_user_id)):
     # returns demo if not logged in
     return {"ok": True, "user_id": user_id}
+
+
+class SetPinPayload(BaseModel):
+    pin: str = Field(min_length=4, max_length=6)
+    duress_pin: str | None = Field(default=None, min_length=4, max_length=6)
+
+
+class VerifyPinPayload(BaseModel):
+    pin: str = Field(min_length=4, max_length=6)
+
+
+@router.post("/pin")
+def set_pin(payload: SetPinPayload, user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
+    if user_id == "demo":
+        raise HTTPException(status_code=401, detail="Login required")
+    user = db.query(models.User).filter(models.User.id == int(user_id)).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    # reuse password hashing for PIN; ideally use argon2id in prod
+    user.pin_hash = hash_password(payload.pin)
+    if payload.duress_pin:
+        user.duress_pin_hash = hash_password(payload.duress_pin)
+    db.add(user); db.commit()
+    return {"ok": True}
+
+
+@router.post("/pin/verify")
+def verify_pin(payload: VerifyPinPayload, request: Request, user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
+    if user_id == "demo":
+        return {"ok": True}
+    user = db.query(models.User).filter(models.User.id == int(user_id)).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.duress_pin_hash and verify_password(payload.pin, user.duress_pin_hash):
+        # Clear session and set to demo decoy
+        set_session_user(request, "demo")
+        return {"ok": True, "duress": True}
+    if user.pin_hash and verify_password(payload.pin, user.pin_hash):
+        return {"ok": True}
+    raise HTTPException(status_code=401, detail="Invalid PIN")

@@ -48,6 +48,17 @@ export async function getRiskRules() {
   return res.data; // { rules, weights, thresholds, features }
 }
 
+// PIN endpoints (to be implemented on backend)
+export async function setPin(pin: string, duressPin?: string) {
+  const res = await api.post(`/auth/pin`, { pin, duress_pin: duressPin });
+  return res.data; // { ok }
+}
+
+export async function verifyPin(pin: string) {
+  const res = await api.post(`/auth/pin/verify`, { pin });
+  return res.data as { ok: boolean; duress?: boolean };
+}
+
 // Export functions
 export async function exportTableau() {
   const res = await api.post(`/exports/tableau`);
