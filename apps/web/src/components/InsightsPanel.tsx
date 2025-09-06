@@ -129,23 +129,23 @@ const InsightsPanel = forwardRef<InsightsPanelRef>((props, ref) => {
       
       {riskData ? (
         <div style={{display:"grid", gap:12, padding:16, border:"1px solid #e5e7eb", borderRadius:8}}>
-          <div style={{display:"flex", alignItems:"center", gap:12}}>
-            <div style={{
-              width: 40,
-              height: 40,
-              borderRadius: "50%",
-              backgroundColor: getRiskLevelColor(riskData.level),
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "white",
-              fontWeight: "bold"
-            }}>
-              {Math.round(riskData.score * 100)}
+          <div style={{display:"flex", alignItems:"center", gap:16}}>
+            <div style={{position:"relative", width:64, height:64}} aria-label="Risk score donut">
+              <svg width="64" height="64" viewBox="0 0 42 42">
+                <circle cx="21" cy="21" r="19" stroke="#e5e7eb" strokeWidth="4" fill="none"/>
+                <circle cx="21" cy="21" r="19" stroke={getRiskLevelColor(riskData.level)} strokeWidth="4" fill="none"
+                        strokeDasharray={`${Math.round(riskData.score*100)} ${100-Math.round(riskData.score*100)}`}
+                        strokeDashoffset="25"/>
+                <text x="21" y="24" textAnchor="middle" fontSize="10" fill="#111" fontWeight="bold">{Math.round(riskData.score*100)}</text>
+              </svg>
             </div>
             <div>
               <div style={{fontWeight:"bold"}}>{getRiskLevelLabel(riskData.level)}</div>
               <div style={{fontSize:14, opacity:0.7}}>Score: {riskData.score.toFixed(3)}</div>
+              <details style={{marginTop:6}}>
+                <summary style={{cursor:"pointer"}}>How it's calculated</summary>
+                <div style={{fontSize:12, opacity:0.8, marginTop:6}}>Weighted features per rules YAML. Levels at warn ≥ {riskData.thresholds?.warn}, high ≥ {riskData.thresholds?.high}.</div>
+              </details>
             </div>
           </div>
           

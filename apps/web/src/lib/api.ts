@@ -37,6 +37,15 @@ export async function createJournal(text: string) {
   return res.data;
 }
 
+export async function updateJournal(id: number, text: string) {
+  const res = await api.patch(`/journals/${id}`, { text });
+  return res.data;
+}
+
+export async function deleteJournal(id: number) {
+  await api.delete(`/journals/${id}`);
+}
+
 // Risk evaluation functions
 export async function getRiskScore() {
   const res = await api.get(`/insights/risk`);
@@ -57,6 +66,11 @@ export async function setPin(pin: string, duressPin?: string) {
 export async function verifyPin(pin: string) {
   const res = await api.post(`/auth/pin/verify`, { pin });
   return res.data as { ok: boolean; duress?: boolean };
+}
+
+export async function updateProfile(fields: { gender?: string|null; relationship_status?: string|null; num_children?: number|null }) {
+  const res = await api.post(`/auth/profile`, fields);
+  return res.data;
 }
 
 // Export functions

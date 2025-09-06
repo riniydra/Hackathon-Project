@@ -86,3 +86,26 @@ def verify_pin(payload: VerifyPinPayload, request: Request, user_id: str = Depen
     if user.pin_hash and verify_password(payload.pin, user.pin_hash):
         return {"ok": True}
     raise HTTPException(status_code=401, detail="Invalid PIN")
+
+
+class ProfileUpdate(BaseModel):
+    gender: str | None = None
+    relationship_status: str | None = None
+    num_children: int | None = None
+
+
+@router.post("/profile")
+def update_profile(payload: ProfileUpdate, user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
+    if user_id == "demo":
+        raise HTTPException(status_code=401, detail="Login required")
+    user = db.query(models.User).filter(models.User.id == int(user_id)).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if payload.gender is not None:
+        user.gender = payload.gender
+    if payload.relationship_status is not None:
+        user.relationship_status = payload.relationship_status
+    if payload.num_children is not None:
+        user.num_children = payload.num_children
+    db.add(user); db.commit()
+    return {"ok": True}

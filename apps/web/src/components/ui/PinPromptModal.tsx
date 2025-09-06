@@ -13,7 +13,11 @@ export default function PinPromptModal() {
   async function attemptVerify(code: string) {
     try {
       const res = await verifyPin(code);
-      setHidden("visible");
+      if (res?.duress) {
+        window.location.reload();
+      } else {
+        setHidden("visible");
+      }
     } catch (e) {
       setPin("");
     }

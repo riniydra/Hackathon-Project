@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { signup, login, setPin } from "@/lib/api";
+import { signup, login, setPin, updateProfile } from "@/lib/api";
 
 export default function OnboardingWizard({ open, onClose }: { open:boolean; onClose:()=>void }) {
   const [step, setStep] = useState(0);
@@ -27,6 +27,13 @@ export default function OnboardingWizard({ open, onClose }: { open:boolean; onCl
       if (step === 2) {
         await setPin(pin, duressPin || undefined);
       }
+      if (step === 3) {
+        await updateProfile({
+          gender: gender || null,
+          relationship_status: relationship || null,
+          num_children: children ? Number(children) : null,
+        });
+      }
       setStep(s => s + 1);
     } catch (e:any) {
       setError(e?.response?.data?.detail || "Something went wrong");
@@ -40,7 +47,7 @@ export default function OnboardingWizard({ open, onClose }: { open:boolean; onCl
   }
 
   return (
-    <div onClick={onClose} style={{position:"absolute", inset:0, display:"grid", placeItems:"center", background:"rgba(0,0,0,.5)"}}>
+    <div onClick={onClose} style={{position:"fixed", inset:0, display:"grid", placeItems:"center", background:"rgba(0,0,0,.5)"}}>
       <div onClick={e=>e.stopPropagation()} style={{background:"#fff", width:"min(620px, 92vw)", borderRadius:12, padding:16}}>
         {step === 0 && (
           <section>
