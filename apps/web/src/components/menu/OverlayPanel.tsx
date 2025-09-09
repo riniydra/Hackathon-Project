@@ -5,7 +5,7 @@ import InsightsPanel from "@/components/InsightsPanel";
 import AuthPanel from "@/components/AuthPanel";
 import PinSetup from "@/components/security/PinSetup";
 import JournalModal from "@/components/JournalModal";
-import { listJournals, createJournal } from "@/lib/api";
+import { listJournals, createJournal, me } from "@/lib/api";
 
 interface JournalItem { id:number; user_id:string; created_at:string; text:string }
 
@@ -15,6 +15,7 @@ export default function OverlayPanel() {
   const [journals, setJournals] = useState<JournalItem[]>([]);
   const [jLoading, setJLoading] = useState(false);
   const [jError, setJError] = useState<string|undefined>();
+  const [authed, setAuthed] = useState(false);
 
   async function loadJournals() {
     setJLoading(true); setJError(undefined);
@@ -29,13 +30,29 @@ export default function OverlayPanel() {
   }
 
   useEffect(() => {
+    async function ensureAuthAndLoad() {
+      try {
+        const who = await me();
+        const isAuthed = !!who?.user_id && who.user_id !== "demo";
+        setAuthed(isAuthed);
+        if (menuOpen && activeTab === "journal" && isAuthed) {
+          await loadJournals();
+        } else if (!isAuthed) {
+          setJournals([]);
+        }
+      } catch {
+        setAuthed(false);
+        setJournals([]);
+      }
+    }
     if (menuOpen && activeTab === "journal") {
-      loadJournals();
+      ensureAuthAndLoad();
     }
   }, [menuOpen, activeTab]);
 
   async function handleSave(text: string) {
     try {
+      if (!authed) return;
       await createJournal(text);
       setJournalOpen(false);
       await loadJournals();
@@ -74,11 +91,14 @@ export default function OverlayPanel() {
         <div style={{overflow:"auto", padding:12}}>
           {activeTab === "journal" && (
             <div style={{display:"grid", gap:12}}>
-              <button onClick={()=>setJournalOpen(true)} style={{padding:"8px 12px"}}>New Journal</button>
+              <button onClick={()=> authed && setJournalOpen(true)} disabled={!authed} style={{padding:"8px 12px", opacity: authed? 1: .6}}>New Journal</button>
               <p style={{opacity:.7}}>Toggle to Game (O) • Quick Hide (Esc)</p>
-              {jLoading && <div style={{opacity:.7}}>Loading journals…</div>}
-              {jError && <div style={{color:"crimson"}}>{jError}</div>}
-              {!jLoading && journals.length > 0 && (
+              {!authed && (
+                <div style={{opacity:.7}}>Log in to create journals and view your list.</div>
+              )}
+              {authed && jLoading && <div style={{opacity:.7}}>Loading journals…</div>}
+              {authed && jError && <div style={{color:"crimson"}}>{jError}</div>}
+              {authed && !jLoading && journals.length > 0 && (
                 <ul style={{listStyle:"none", padding:0, margin:0, display:"grid", gap:8}}>
                   {journals.map(j => (
                     <li key={j.id} style={{background:"#f5f5f5", padding:8, borderRadius:8}}>
@@ -88,7 +108,7 @@ export default function OverlayPanel() {
                   ))}
                 </ul>
               )}
-              {!jLoading && journals.length === 0 && (
+              {authed && !jLoading && journals.length === 0 && (
                 <div style={{opacity:.7}}>No journals yet. Create your first one.</div>
               )}
               <JournalModal open={journalOpen} onClose={()=>setJournalOpen(false)} onSave={handleSave} />
