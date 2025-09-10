@@ -1,7 +1,7 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
-type ActiveTab = "journal" | "risk" | "security";
+type ActiveTab = "journal" | "risk" | "security" | "design";
 type HiddenState = "visible" | "hidden" | "pin";
 
 interface UIStateContextValue {

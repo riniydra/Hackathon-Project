@@ -5,7 +5,9 @@ import InsightsPanel from "@/components/InsightsPanel";
 import AuthPanel from "@/components/AuthPanel";
 import PinSetup from "@/components/security/PinSetup";
 import JournalModal from "@/components/JournalModal";
+import DesignTokenDemo from "@/components/DesignTokenDemo";
 import { listJournals, createJournal, me } from "@/lib/api";
+import { tokens, styles } from "@/lib/tokens";
 
 interface JournalItem { id:number; user_id:string; created_at:string; text:string }
 
@@ -72,20 +74,22 @@ export default function OverlayPanel() {
       <div
         onClick={e=>e.stopPropagation()}
         style={{
-          width: 420,
+          width: activeTab === "design" ? 900 : 420,
           height: "100%",
-          background:"rgba(255,255,255,.96)",
-          backdropFilter: "blur(8px)",
-          borderLeft: "1px solid #e5e7eb",
+          background: tokens.bg.surfaceOverlayBlur,
+          backdropFilter: `blur(${tokens.blur.lg})`,
+          borderLeft: `1px solid ${tokens.border.primary}`,
           display:"grid",
           gridTemplateRows:"auto 1fr auto",
-          boxShadow:"-8px 0 24px rgba(0,0,0,.1)"
+          boxShadow: tokens.shadow.xl,
+          transition: tokens.transition.base
         }}
       >
-        <div style={{display:"flex", gap:8, padding:12}}>
+        <div style={{display:"flex", gap: tokens.space(2), padding: tokens.space(3)}}>
           <Tab label="Journaling" active={activeTab==="journal"} onClick={()=>openTab("journal")} />
           <Tab label="Risk Score" active={activeTab==="risk"} onClick={()=>openTab("risk")} />
           <Tab label="Login" active={activeTab==="security"} onClick={()=>openTab("security")} />
+          <Tab label="Design" active={activeTab==="design"} onClick={()=>openTab("design")} />
         </div>
 
         <div style={{overflow:"auto", padding:12}}>
@@ -123,6 +127,11 @@ export default function OverlayPanel() {
               <PinSetup />
             </div>
           )}
+          {activeTab === "design" && (
+            <div style={{height: "100%", overflow: "auto"}}>
+              <DesignTokenDemo />
+            </div>
+          )}
         </div>
 
         <div style={{display:"flex", justifyContent:"space-between", padding:12, borderTop:"1px solid #e5e7eb"}}>
@@ -138,10 +147,15 @@ function Tab({ label, active, onClick }: { label:string; active:boolean; onClick
   return (
     <button onClick={onClick} aria-pressed={active}
       style={{
-        padding:"8px 12px",
-        borderRadius:8,
-        border: active? "1px solid #93c5fd" : "1px solid #e5e7eb",
-        background: active? "#eff6ff" : "#fff"
+        padding: `${tokens.space(2)} ${tokens.space(3)}`,
+        borderRadius: tokens.radius.lg,
+        border: `1px solid ${active ? tokens.border.focus : tokens.border.primary}`,
+        background: active ? tokens.bg.accent : tokens.bg.surface,
+        color: tokens.text.primary,
+        fontSize: tokens.font.size.sm,
+        fontWeight: tokens.font.weight.medium,
+        cursor: "pointer",
+        transition: tokens.transition.fast
       }}
     >{label}</button>
   );
