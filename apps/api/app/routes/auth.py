@@ -5,6 +5,7 @@ from ..db import get_db, engine, Base
 from .. import models
 from pydantic import BaseModel, Field
 from ..auth import hash_password, verify_password, set_session_user, clear_session, get_current_user_id
+from ..schemas import ProfileUpdate, ProfileOut
 
 # ensure tables exist
 Base.metadata.create_all(bind=engine)
@@ -88,11 +89,33 @@ def verify_pin(payload: VerifyPinPayload, request: Request, user_id: str = Depen
     raise HTTPException(status_code=401, detail="Invalid PIN")
 
 
-class ProfileUpdate(BaseModel):
-    gender: str | None = None
-    relationship_status: str | None = None
-    num_children: int | None = None
-
+@router.get("/profile")
+def get_profile(user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)) -> ProfileOut:
+    if user_id == "demo":
+        # Return demo profile data
+        return ProfileOut(
+            age=25,
+            gender="prefer not to say",
+            relationship_status="single",
+            victim_housing="safe",
+            has_trusted_support=True,
+            default_confidentiality="private",
+            default_share_with="",
+            num_children=0
+        )
+    user = db.query(models.User).filter(models.User.id == int(user_id)).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return ProfileOut(
+        age=user.age,
+        gender=user.gender,
+        relationship_status=user.relationship_status,
+        victim_housing=user.victim_housing,
+        has_trusted_support=user.has_trusted_support,
+        default_confidentiality=user.default_confidentiality,
+        default_share_with=user.default_share_with,
+        num_children=user.num_children
+    )
 
 @router.post("/profile")
 def update_profile(payload: ProfileUpdate, user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
@@ -101,11 +124,24 @@ def update_profile(payload: ProfileUpdate, user_id: str = Depends(get_current_us
     user = db.query(models.User).filter(models.User.id == int(user_id)).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    
+    # Update all profile fields
+    if payload.age is not None:
+        user.age = payload.age
     if payload.gender is not None:
         user.gender = payload.gender
     if payload.relationship_status is not None:
         user.relationship_status = payload.relationship_status
+    if payload.victim_housing is not None:
+        user.victim_housing = payload.victim_housing
+    if payload.has_trusted_support is not None:
+        user.has_trusted_support = payload.has_trusted_support
+    if payload.default_confidentiality is not None:
+        user.default_confidentiality = payload.default_confidentiality
+    if payload.default_share_with is not None:
+        user.default_share_with = payload.default_share_with
     if payload.num_children is not None:
         user.num_children = payload.num_children
+    
     db.add(user); db.commit()
     return {"ok": True}
