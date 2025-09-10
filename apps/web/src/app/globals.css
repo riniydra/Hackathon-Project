@@ -1,0 +1,27 @@
+:root {
+  /* Card */
+  --rs-card-bg: #F3EBD7;
+  --rs-card-header: #F1C267;
+  --rs-card-border: #D6E2F1;
+  --rs-shadow: 0 12px 40px rgba(2, 6, 23, 0.25);
+
+  /* Text */
+  --rs-text: #0F3A4A;
+  --rs-text-muted: #2F596A;
+  --rs-link: #275CA8;
+
+  /* Accent */
+  --rs-teal: #19B5AE;
+  --rs-teal-dark: #165E68;
+  --rs-teal-light: #4FD7CB;
+  --rs-amber: #E6A642;
+  --rs-track: #E5E7EB;
+}
+
+html, body, #__next {
+  height: 100%;
+}
+
+* { box-sizing: border-box; }
+
+

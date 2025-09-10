@@ -1,7 +1,7 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
-type ActiveTab = "journal" | "risk" | "security";
+type ActiveTab = "journal" | "chat" | "risk" | "security";
 type HiddenState = "visible" | "hidden" | "pin";
 
 interface UIStateContextValue {
@@ -44,6 +44,7 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
       const isEsc = key === "escape";
       const isCmdDot = (e.metaKey || e.ctrlKey) && key === ".";
       const isJ = (e.metaKey || e.ctrlKey) && key === "j";
+      const isC = (e.metaKey || e.ctrlKey) && key === "c";
       const isO = (e.metaKey || e.ctrlKey) && key === "o";
 
       if (isCmdDot) {
@@ -54,6 +55,12 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
       if (isJ) {
         e.preventDefault();
         openTab("journal");
+        return;
+      }
+
+      if (isC) {
+        e.preventDefault();
+        openTab("chat");
         return;
       }
 

@@ -16,8 +16,10 @@ export default function AuthPanel({ onAuth }: { onAuth?: () => void }) {
     try {
       const r = await me();
       setStatus(r);
+      return r;
     } catch (e) {
       setStatus(null);
+      return null;
     }
   }
 

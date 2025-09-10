@@ -1,5 +1,6 @@
 "use client";
 import { useEffect } from "react";
+import { colors } from "@/components/theme/tokens";
 
 export default function SafetyShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
@@ -14,5 +15,5 @@ export default function SafetyShell({ children }: { children: React.ReactNode })
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  return <div style={{width:"100%", height:"100%"}}>{children}</div>;
+  return <div style={{width:"100%", height:"100%", color: colors.slateText}}>{children}</div>;
 }

@@ -1,6 +1,7 @@
 "use client";
-import { useEffect, useState, useImperativeHandle, forwardRef } from "react";
+import { useEffect, useState, useImperativeHandle, forwardRef, useRef } from "react";
 import { getRiskScore, exportTableau, exportFullData, listExports } from "@/lib/api";
+import { colors } from "@/components/theme/tokens";
 
 interface RiskData {
   score: number;
@@ -29,12 +30,18 @@ const InsightsPanel = forwardRef<InsightsPanelRef>((props, ref) => {
   const [loading, setLoading] = useState(false);
   const [riskLoading, setRiskLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
+  const [lastUpdated, setLastUpdated] = useState<string>("");
+  const [history, setHistory] = useState<{ts:number; score:number}[]>([]);
+  const mountedRef = useRef(false);
 
   async function loadRiskData() {
     setRiskLoading(true);
     try {
       const data = await getRiskScore();
       setRiskData(data);
+      const now = Date.now();
+      setLastUpdated(new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      setHistory(h => ([...h, { ts: now, score: data?.score ?? 0 }]).slice(-10));
     } catch (e: any) {
       setError("Failed to load risk data");
     } finally {
@@ -85,14 +92,26 @@ const InsightsPanel = forwardRef<InsightsPanelRef>((props, ref) => {
   useEffect(() => {
     loadRiskData();
     loadExports();
+    // Listen for risk refresh events dispatched from elsewhere in the app
+    function onRiskRefresh() {
+      loadRiskData();
+    }
+    if (typeof window !== "undefined") {
+      window.addEventListener("risk:refresh", onRiskRefresh);
+    }
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("risk:refresh", onRiskRefresh);
+      }
+    };
   }, []);
 
   const getRiskLevelColor = (level: string) => {
     switch (level) {
       case 'high': return '#dc2626';
       case 'warn': return '#ea580c';
-      case 'low': return '#16a34a';
-      default: return '#6b7280';
+      case 'low': return colors.skyDark;
+      default: return colors.slateText;
     }
   };
 
@@ -109,8 +128,10 @@ const InsightsPanel = forwardRef<InsightsPanelRef>((props, ref) => {
   return (
     <div style={{display:"grid", gap:16, maxWidth:600}}>
       <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
-        <h3>Risk Insights</h3>
-        <button 
+        <h3 style={{margin:0, color: 'var(--rs-text)'}}>Risk Score</h3>
+        <div style={{display:"flex", alignItems:"center", gap:12}}>
+          <span style={{fontSize:12, opacity:.7}}>{lastUpdated ? `Updated ${lastUpdated}` : ""}</span>
+          <button 
           onClick={loadRiskData}
           disabled={riskLoading}
           style={{
@@ -125,14 +146,15 @@ const InsightsPanel = forwardRef<InsightsPanelRef>((props, ref) => {
         >
           {riskLoading ? "🔄 Updating..." : "🔄 Refresh"}
         </button>
+        </div>
       </div>
       
       {riskData ? (
-        <div style={{display:"grid", gap:12, padding:16, border:"1px solid #e5e7eb", borderRadius:8}}>
+        <div style={{display:"grid", gap:12, padding:16, border:`1px solid ${colors.border}`, borderRadius:24, background:"var(--rs-card-bg)", boxShadow:'var(--rs-shadow)'}}>
           <div style={{display:"flex", alignItems:"center", gap:16}}>
             <div style={{position:"relative", width:64, height:64}} aria-label="Risk score donut">
               <svg width="64" height="64" viewBox="0 0 42 42">
-                <circle cx="21" cy="21" r="19" stroke="#e5e7eb" strokeWidth="4" fill="none"/>
+                <circle cx="21" cy="21" r="19" stroke="var(--rs-track)" strokeWidth="4" fill="none"/>
                 <circle cx="21" cy="21" r="19" stroke={getRiskLevelColor(riskData.level)} strokeWidth="4" fill="none"
                         strokeDasharray={`${Math.round(riskData.score*100)} ${100-Math.round(riskData.score*100)}`}
                         strokeDashoffset="25"/>
@@ -146,6 +168,26 @@ const InsightsPanel = forwardRef<InsightsPanelRef>((props, ref) => {
                 <summary style={{cursor:"pointer"}}>How it's calculated</summary>
                 <div style={{fontSize:12, opacity:0.8, marginTop:6}}>Weighted features per rules YAML. Levels at warn ≥ {riskData.thresholds?.warn}, high ≥ {riskData.thresholds?.high}.</div>
               </details>
+            </div>
+            {/* Sparkline */}
+            <div style={{marginLeft:"auto"}}>
+              <svg width="160" height="40" viewBox="0 0 160 40">
+                <polyline
+                  fill="none"
+                  stroke={colors.skyDark}
+                  strokeWidth="2"
+                  points={(() => {
+                    if (!history.length) return "";
+                    const max = 1, min = 0;
+                    const step = 160 / Math.max(1, history.length-1);
+                    return history.map((h, i) => {
+                      const x = i * step;
+                      const y = 40 - ((h.score - min)/(max-min)) * 36 - 2;
+                      return `${x},${y}`;
+                    }).join(" ");
+                  })()}
+                />
+              </svg>
             </div>
           </div>
           
@@ -163,19 +205,27 @@ const InsightsPanel = forwardRef<InsightsPanelRef>((props, ref) => {
           {Object.keys(riskData.feature_scores).length > 0 && (
             <div>
               <div style={{fontWeight:"bold", marginBottom:8}}>Feature Scores:</div>
-              <div style={{display:"grid", gap:4}}>
-                {Object.entries(riskData.feature_scores).map(([feature, score]) => (
-                  <div key={feature} style={{display:"flex", justifyContent:"space-between"}}>
-                    <span style={{fontSize:14}}>{feature.replace(/_/g, ' ')}:</span>
-                    <span style={{fontSize:14, fontWeight:"bold"}}>{score.toFixed(3)}</span>
-                  </div>
-                ))}
+              <div style={{display:"grid", gap:6}}>
+                {Object.entries(riskData.feature_scores).map(([feature, score]) => {
+                  const pct = Math.max(0, Math.min(100, Math.round(score*100)));
+                  return (
+                    <div key={feature}>
+                      <div style={{display:"flex", justifyContent:"space-between", fontSize:12, marginBottom:4}}>
+                        <span>{feature.replace(/_/g, ' ')}</span>
+                        <span>{pct}%</span>
+                      </div>
+                      <div style={{height:8, borderRadius:4, background: colors.skyLight, border:`1px solid ${colors.border}`}}>
+                        <div style={{width:`${pct}%`, height:"100%", background:getRiskLevelColor(riskData.level), borderRadius:4}} />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
         </div>
       ) : (
-        <div style={{padding:16, border:"1px solid #e5e7eb", borderRadius:8, textAlign:"center"}}>
+        <div style={{padding:16, border:`1px solid ${colors.border}`, borderRadius:8, textAlign:"center", background:"#fff"}}>
           {riskLoading ? "Updating risk data..." : "Loading risk data..."}
         </div>
       )}

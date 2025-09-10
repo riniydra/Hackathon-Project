@@ -95,3 +95,113 @@ export async function downloadExport(filename: string) {
   });
   return res.data; // Blob data for file download
 }
+
+// Chat API functions
+export interface ChatMessage {
+  id: number;
+  session_id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  created_at: string;
+  intent?: string;
+  abuse_type?: string;
+  sentiment_score?: number;
+  risk_points?: number;
+  severity_score?: number;
+  escalation_index?: number;
+  is_high_risk: boolean;
+}
+
+export interface ChatSession {
+  session_id: string;
+  created_at: string;
+  message_count: number;
+}
+
+export async function createChatSession(): Promise<ChatSession> {
+  const res = await api.post(`/chat/sessions`);
+  return res.data;
+}
+
+export async function listChatSessions(): Promise<ChatSession[]> {
+  const res = await api.get(`/chat/sessions`);
+  return res.data;
+}
+
+export async function getChatMessages(sessionId: string): Promise<ChatMessage[]> {
+  const res = await api.get(`/chat/sessions/${sessionId}/messages`);
+  return res.data;
+}
+
+export async function deleteChatSession(sessionId: string) {
+  await api.delete(`/chat/sessions/${sessionId}`);
+}
+
+export interface ChatStreamEvent {
+  type: 'analysis' | 'warning' | 'content' | 'complete' | 'error';
+  data?: any;
+  content?: string;
+  message?: string;
+  session_id?: string;
+}
+
+export async function streamChatMessage(
+  message: string,
+  sessionId?: string,
+  onEvent?: (event: ChatStreamEvent) => void,
+  meta?: { jurisdiction?: string; children_present?: boolean|null; confidentiality?: string; share_with?: string }
+): Promise<string> {
+  const response = await fetch(`${BASE}/chat/stream`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify({ message, session_id: sessionId, ...meta }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Chat stream failed: ${response.statusText}`);
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) {
+    throw new Error('No response body');
+  }
+
+  const decoder = new TextDecoder();
+  let assistantContent = '';
+  let currentSessionId = sessionId;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value);
+      const lines = chunk.split('\n');
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try {
+            const event: ChatStreamEvent = JSON.parse(line.slice(6));
+            
+            if (event.type === 'content') {
+              assistantContent += event.content || '';
+            } else if (event.type === 'complete') {
+              currentSessionId = event.session_id;
+            }
+            
+            onEvent?.(event);
+          } catch (e) {
+            console.warn('Failed to parse SSE event:', line);
+          }
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  return assistantContent;
+}

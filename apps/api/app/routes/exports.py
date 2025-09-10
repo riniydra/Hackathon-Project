@@ -8,6 +8,7 @@ import csv
 import hashlib
 import os
 from typing import List, Dict, Any
+from ..utils.ids import user_id_hash
 from ..db import get_db
 from .. import models
 from ..auth import get_current_user_id
@@ -54,7 +55,7 @@ class DataExporter:
     def _export_tableau_format(self, db: Session, user_id: str) -> Dict[str, Any]:
         """Export data in Tableau-compatible format"""
         today = datetime.utcnow().date().isoformat()
-        user_hash = self._hash_user_id(user_id)
+        user_hash = user_id_hash(user_id)
         
         # Get user data
         user_data = self._get_user_summary_data(db, user_id)
@@ -94,7 +95,7 @@ class DataExporter:
     def _export_full_data(self, db: Session, user_id: str) -> Dict[str, Any]:
         """Export full user data for data portability"""
         today = datetime.utcnow().date().isoformat()
-        user_hash = self._hash_user_id(user_id)
+        user_hash = user_id_hash(user_id)
         
         # Get all user data
         journals = self._get_user_journals(db, user_id)
@@ -142,9 +143,7 @@ class DataExporter:
             "export_date": today
         }
     
-    def _hash_user_id(self, user_id: str) -> str:
-        """Create a hash of user ID for anonymization"""
-        return hashlib.sha256(user_id.encode()).hexdigest()[:16]
+    # _hash_user_id deprecated: use utils.user_id_hash instead
     
     def _get_user_summary_data(self, db: Session, user_id: str) -> Dict[str, Any]:
         """Get summary data for Tableau export"""

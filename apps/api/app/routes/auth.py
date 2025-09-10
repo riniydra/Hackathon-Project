@@ -47,6 +47,16 @@ def me(user_id: str = Depends(get_current_user_id)):
     # returns demo if not logged in
     return {"ok": True, "user_id": user_id}
 
+@router.get("/debug")
+def debug_session(request: Request):
+    # Debug endpoint to check session state
+    session_data = dict(request.session)
+    return {
+        "session_data": session_data,
+        "user_id": request.session.get("user_id"),
+        "all_headers": dict(request.headers)
+    }
+
 
 class SetPinPayload(BaseModel):
     pin: str = Field(min_length=4, max_length=6)
