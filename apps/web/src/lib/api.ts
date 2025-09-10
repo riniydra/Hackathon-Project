@@ -68,7 +68,34 @@ export async function verifyPin(pin: string) {
   return res.data as { ok: boolean; duress?: boolean };
 }
 
-export async function updateProfile(fields: { gender?: string|null; relationship_status?: string|null; num_children?: number|null }) {
+export interface ProfileData {
+  age?: number | null;
+  gender?: string | null;
+  relationship_status?: string | null;
+  victim_housing?: string | null;
+  has_trusted_support?: boolean | null;
+  default_confidentiality?: string | null;
+  default_share_with?: string | null;
+  num_children?: number | null;
+}
+
+export interface ChatContextOverrides {
+  confidentiality?: string;
+  share_with?: string;
+  include_profile?: boolean;
+}
+
+export interface ChatMessage {
+  message: string;
+  context_overrides?: ChatContextOverrides;
+}
+
+export async function getProfile(): Promise<ProfileData> {
+  const res = await api.get(`/auth/profile`);
+  return res.data;
+}
+
+export async function updateProfile(fields: ProfileData) {
   const res = await api.post(`/auth/profile`, fields);
   return res.data;
 }
@@ -94,4 +121,17 @@ export async function downloadExport(filename: string) {
     responseType: 'blob'
   });
   return res.data; // Blob data for file download
+}
+
+// Chat endpoints
+export async function sendChatMessage(message: ChatMessage) {
+  const res = await api.post(`/chat/stream`, message, {
+    responseType: 'stream'
+  });
+  return res.data;
+}
+
+export async function getChatContext(message: ChatMessage) {
+  const res = await api.post(`/chat/context`, message);
+  return res.data;
 }
