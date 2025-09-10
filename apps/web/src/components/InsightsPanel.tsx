@@ -89,10 +89,10 @@ const InsightsPanel = forwardRef<InsightsPanelRef>((props, ref) => {
 
   const getRiskLevelColor = (level: string) => {
     switch (level) {
-      case 'high': return '#dc2626';
-      case 'warn': return '#ea580c';
-      case 'low': return '#16a34a';
-      default: return '#6b7280';
+      case 'high': return 'var(--color-risk-high)';
+      case 'warn': return 'var(--color-risk-warn)';
+      case 'low': return 'var(--color-risk-low)';
+      default: return 'var(--color-risk-default)';
     }
   };
 
@@ -107,18 +107,18 @@ const InsightsPanel = forwardRef<InsightsPanelRef>((props, ref) => {
   };
 
   return (
-    <div style={{display:"grid", gap:16, maxWidth:600}}>
+    <div className="insights-panel" style={{display:"grid", gap:"var(--spacing-lg)", maxWidth:600}}>
       <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
         <h3>Risk Insights</h3>
         <button 
           onClick={loadRiskData}
           disabled={riskLoading}
           style={{
-            padding:"4px 8px", 
+            padding:"var(--spacing-xs) var(--spacing-sm)", 
             fontSize:12, 
-            border:"1px solid #d1d5db", 
-            borderRadius:4, 
-            backgroundColor:"#f9fafb",
+            border:"1px solid var(--color-button-border)", 
+            borderRadius:"var(--border-radius-sm)", 
+            backgroundColor:"var(--color-button-background)",
             cursor: riskLoading ? "not-allowed" : "pointer",
             opacity: riskLoading ? 0.6 : 1
           }}
@@ -128,33 +128,43 @@ const InsightsPanel = forwardRef<InsightsPanelRef>((props, ref) => {
       </div>
       
       {riskData ? (
-        <div style={{display:"grid", gap:12, padding:16, border:"1px solid #e5e7eb", borderRadius:8}}>
-          <div style={{display:"flex", alignItems:"center", gap:16}}>
+        <div className="risk-card mobile-compact" style={{display:"grid", gap:"var(--spacing-md)", padding:"var(--spacing-lg)", border:"1px solid var(--color-border)", borderRadius:"var(--border-radius-md)"}}>
+          <div className="risk-summary mobile-stack" style={{display:"flex", alignItems:"center", gap:"var(--spacing-lg)"}}>
             <div style={{position:"relative", width:64, height:64}} aria-label="Risk score donut">
               <svg width="64" height="64" viewBox="0 0 42 42">
-                <circle cx="21" cy="21" r="19" stroke="#e5e7eb" strokeWidth="4" fill="none"/>
-                <circle cx="21" cy="21" r="19" stroke={getRiskLevelColor(riskData.level)} strokeWidth="4" fill="none"
-                        strokeDasharray={`${Math.round(riskData.score*100)} ${100-Math.round(riskData.score*100)}`}
-                        strokeDashoffset="25"/>
-                <text x="21" y="24" textAnchor="middle" fontSize="10" fill="#111" fontWeight="bold">{Math.round(riskData.score*100)}</text>
+                <circle cx="21" cy="21" r="19" stroke="var(--color-border)" strokeWidth="4" fill="none"/>
+                <circle 
+                  cx="21" cy="21" r="19" 
+                  stroke={getRiskLevelColor(riskData.level)} 
+                  strokeWidth="4" 
+                  fill="none"
+                  className="donut-animated"
+                  style={{
+                    '--donut-progress': Math.round(riskData.score*100),
+                    strokeDasharray: `${Math.round(riskData.score*100)} ${100-Math.round(riskData.score*100)}`,
+                    strokeDashoffset: '25',
+                    transformOrigin: 'center'
+                  } as React.CSSProperties}
+                />
+                <text x="21" y="24" textAnchor="middle" fontSize="10" fill="var(--color-text-primary)" fontWeight="bold">{Math.round(riskData.score*100)}</text>
               </svg>
             </div>
             <div>
               <div style={{fontWeight:"bold"}}>{getRiskLevelLabel(riskData.level)}</div>
-              <div style={{fontSize:14, opacity:0.7}}>Score: {riskData.score.toFixed(3)}</div>
+              <div style={{fontSize:14, color:"var(--color-text-secondary)"}}>Score: {riskData.score.toFixed(3)}</div>
               <details style={{marginTop:6}}>
                 <summary style={{cursor:"pointer"}}>How it's calculated</summary>
-                <div style={{fontSize:12, opacity:0.8, marginTop:6}}>Weighted features per rules YAML. Levels at warn ≥ {riskData.thresholds?.warn}, high ≥ {riskData.thresholds?.high}.</div>
+                <div style={{fontSize:12, color:"var(--color-text-muted)", marginTop:"var(--spacing-xs)"}}>Weighted features per rules YAML. Levels at warn ≥ {riskData.thresholds?.warn}, high ≥ {riskData.thresholds?.high}.</div>
               </details>
             </div>
           </div>
           
           {riskData.reasons.length > 0 && (
             <div>
-              <div style={{fontWeight:"bold", marginBottom:8}}>Factors:</div>
-              <ul style={{margin:0, paddingLeft:20}}>
+              <div style={{fontWeight:"bold", marginBottom:"var(--spacing-sm)"}}>Factors:</div>
+              <ul style={{margin:0, paddingLeft:"var(--spacing-lg)"}}>
                 {riskData.reasons.map((reason, i) => (
-                  <li key={i} style={{marginBottom:4}}>{reason}</li>
+                  <li key={i} style={{marginBottom:"var(--spacing-xs)"}}>{reason}</li>
                 ))}
               </ul>
             </div>
@@ -162,8 +172,8 @@ const InsightsPanel = forwardRef<InsightsPanelRef>((props, ref) => {
           
           {Object.keys(riskData.feature_scores).length > 0 && (
             <div>
-              <div style={{fontWeight:"bold", marginBottom:8}}>Feature Scores:</div>
-              <div style={{display:"grid", gap:4}}>
+              <div style={{fontWeight:"bold", marginBottom:"var(--spacing-sm)"}}>Feature Scores:</div>
+              <div style={{display:"grid", gap:"var(--spacing-xs)"}}>
                 {Object.entries(riskData.feature_scores).map(([feature, score]) => (
                   <div key={feature} style={{display:"flex", justifyContent:"space-between"}}>
                     <span style={{fontSize:14}}>{feature.replace(/_/g, ' ')}:</span>
@@ -175,18 +185,18 @@ const InsightsPanel = forwardRef<InsightsPanelRef>((props, ref) => {
           )}
         </div>
       ) : (
-        <div style={{padding:16, border:"1px solid #e5e7eb", borderRadius:8, textAlign:"center"}}>
+        <div style={{padding:"var(--spacing-lg)", border:"1px solid var(--color-border)", borderRadius:"var(--border-radius-md)", textAlign:"center"}}>
           {riskLoading ? "Updating risk data..." : "Loading risk data..."}
         </div>
       )}
 
       <h3>Data Export</h3>
       
-      <div style={{display:"grid", gap:8}}>
+      <div style={{display:"grid", gap:"var(--spacing-sm)"}}>
         <button 
           onClick={handleExportTableau} 
           disabled={loading}
-          style={{padding:"8px 16px", border:"1px solid #d1d5db", borderRadius:4, backgroundColor:"#f9fafb"}}
+          style={{padding:"var(--spacing-sm) var(--spacing-lg)", border:"1px solid var(--color-button-border)", borderRadius:"var(--border-radius-sm)", backgroundColor:"var(--color-button-background)"}}
         >
           {loading ? "Creating..." : "Export for Tableau"}
         </button>
@@ -194,7 +204,7 @@ const InsightsPanel = forwardRef<InsightsPanelRef>((props, ref) => {
         <button 
           onClick={handleExportFull} 
           disabled={loading}
-          style={{padding:"8px 16px", border:"1px solid #d1d5db", borderRadius:4, backgroundColor:"#f9fafb"}}
+          style={{padding:"var(--spacing-sm) var(--spacing-lg)", border:"1px solid var(--color-button-border)", borderRadius:"var(--border-radius-sm)", backgroundColor:"var(--color-button-background)"}}
         >
           {loading ? "Creating..." : "Export Full Data"}
         </button>
@@ -202,13 +212,13 @@ const InsightsPanel = forwardRef<InsightsPanelRef>((props, ref) => {
 
       {exports.length > 0 && (
         <div>
-          <div style={{fontWeight:"bold", marginBottom:8}}>Recent Exports:</div>
-          <div style={{display:"grid", gap:4}}>
+          <div style={{fontWeight:"bold", marginBottom:"var(--spacing-sm)"}}>Recent Exports:</div>
+          <div style={{display:"grid", gap:"var(--spacing-xs)"}}>
             {exports.slice(0, 5).map((exp, i) => (
               <div key={i} style={{
-                padding:8, 
-                border:"1px solid #e5e7eb", 
-                borderRadius:4, 
+                padding:"var(--spacing-sm)", 
+                border:"1px solid var(--color-border)", 
+                borderRadius:"var(--border-radius-sm)", 
                 fontSize:14,
                 display:"flex",
                 justifyContent:"space-between",
@@ -216,11 +226,11 @@ const InsightsPanel = forwardRef<InsightsPanelRef>((props, ref) => {
               }}>
                 <div>
                   <div style={{fontWeight:"bold"}}>{exp.filename}</div>
-                  <div style={{fontSize:12, opacity:0.7}}>
+                  <div style={{fontSize:12, color:"var(--color-text-secondary)"}}>
                     {exp.type} • {new Date(exp.created).toLocaleDateString()}
                   </div>
                 </div>
-                <div style={{fontSize:12, opacity:0.7}}>
+                <div style={{fontSize:12, color:"var(--color-text-secondary)"}}>
                   {(exp.size / 1024).toFixed(1)} KB
                 </div>
               </div>
@@ -230,7 +240,7 @@ const InsightsPanel = forwardRef<InsightsPanelRef>((props, ref) => {
       )}
 
       {error && (
-        <div style={{color:"#dc2626", padding:8, backgroundColor:"#fef2f2", borderRadius:4}}>
+        <div style={{color:"var(--color-text-error)", padding:"var(--spacing-sm)", backgroundColor:"var(--color-background-error)", borderRadius:"var(--border-radius-sm)"}}>
           {error}
         </div>
       )}
