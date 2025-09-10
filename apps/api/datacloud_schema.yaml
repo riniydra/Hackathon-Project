@@ -1,0 +1,162 @@
+openapi: 3.0.3
+components:
+  schemas:
+    chat_events:
+      type: object
+      description: One row per chat/journal event, denormalized for streaming ingestion
+      properties:
+        event_id:
+          type: string
+          description: Unique event identifier
+        user_id_hash:
+          type: string
+          description: Stable anonymized user id (HMAC)
+        chat_id:
+          type: string
+          description: Session id; for journals use journal_<user>
+        created_at:
+          type: string
+          format: date-time
+        journal_entry:
+          type: string
+          description: Original user text (redact before export if needed)
+        entry_source:
+          type: string
+          enum: [web, slack, other]
+        jurisdiction:
+          type: string
+        location_type:
+          type: string
+          enum: [home, work, public, online, unknown]
+        children_present:
+          type: boolean
+        event_type:
+          type: string
+          enum: [report_incident, safety_planning, seek_emotional_support, seek_legal_info, other]
+        type_of_abuse:
+          type: string
+          enum: [physical, emotional, financial, digital_surveillance, stalking, sexual, unknown]
+        sentiment_score:
+          type: number
+        risk_points:
+          type: integer
+        severity_score:
+          type: integer
+        escalation_index:
+          type: number
+        threats_to_kill:
+          type: boolean
+        strangulation:
+          type: boolean
+        weapon_involved:
+          type: boolean
+        stalking:
+          type: boolean
+        digital_surveillance:
+          type: boolean
+        model_summary:
+          type: string
+          description: PII-free short summary
+        confidentiality_level:
+          type: string
+          enum: [private, advocate_only, share_with_attorney]
+        share_with:
+          type: string
+          enum: [nobody, advocate, attorney]
+        substance_use:
+          type: string
+          enum: [yes, no, unsure, unknown]
+        victim_housing:
+          type: string
+          enum: [stable, with_abuser, shelter, friends, unknown]
+        support:
+          type: string
+          enum: [advocate, therapist, family, none, unknown]
+        financial_control:
+          type: string
+          enum: [yes, no, unsure, unknown]
+        reporting_history:
+          type: string
+          enum: [police, court, advocate, none, unknown]
+        frequency_of_abuse:
+          type: string
+          enum: [none, rare, monthly, weekly, daily]
+        recent_escalation:
+          type: string
+          enum: [yes, no, unsure, unknown]
+        safety_plan_state:
+          type: string
+          enum: [active, declined, unknown]
+        safety_plan_last_updated:
+          type: string
+          format: date-time
+
+    risk_snapshots:
+      type: object
+      description: Periodic user risk assessments (computed)
+      properties:
+        user_id_hash:
+          type: string
+          description: Stable anonymized user id (HMAC)
+        created_at:
+          type: string
+          format: date-time
+        score:
+          type: number
+        level:
+          type: string
+          enum: [low, warn, high, demo]
+        top_reasons:
+          type: string
+          description: Comma-separated top factors
+        feature_scores:
+          type: object
+          description: JSON object of feature->score
+
+    journals_public:
+      type: object
+      description: Redacted journals suitable for analytics/exports
+      properties:
+        journal_id:
+          type: string
+        user_id_hash:
+          type: string
+          description: Stable anonymized user id (HMAC)
+        created_at:
+          type: string
+          format: date-time
+        mood:
+          type: integer
+        tags:
+          type: string
+        text_redacted:
+          type: string
+
+    user_profiles:
+      type: object
+      description: Stable profile/preferences captured during onboarding
+      properties:
+        user_id_hash:
+          type: string
+          description: Stable anonymized user id (HMAC)
+        age:
+          type: integer
+        gender:
+          type: string
+        relationship_status:
+          type: string
+        victim_housing:
+          type: string
+          enum: [stable, with_abuser, shelter, friends, unknown]
+        has_trusted_support:
+          type: boolean
+        default_confidentiality:
+          type: string
+          enum: [private, advocate_only, share_with_attorney]
+        default_share_with:
+          type: string
+          enum: [nobody, advocate, attorney]
+        jurisdiction_default:
+          type: string
+        children_present_default:
+          type: boolean
