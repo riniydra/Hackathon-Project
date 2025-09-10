@@ -95,3 +95,37 @@ export async function downloadExport(filename: string) {
   });
   return res.data; // Blob data for file download
 }
+
+// Chat functions
+export async function createChatEvent(role: 'user' | 'assistant', message: string, extraJson?: Record<string, any>) {
+  const res = await api.post(`/chat/`, { 
+    role, 
+    message, 
+    extra_json: extraJson 
+  });
+  return res.data;
+}
+
+export async function listChatEvents(limit = 50) {
+  const res = await api.get(`/chat/?limit=${limit}`);
+  return res.data;
+}
+
+export async function saveGuidedChipResponses(responses: {
+  substance_use?: string;
+  frequency_of_abuse?: string;
+  financial_control?: string;
+  reporting_history?: string;
+  recent_escalation?: string;
+  safety_plan?: string;
+}, message = "Guided chip responses collected") {
+  const res = await api.post(`/chat/guided-chips`, responses, {
+    params: { message }
+  });
+  return res.data;
+}
+
+export async function getLatestGuidedChips() {
+  const res = await api.get(`/chat/guided-chips/latest`);
+  return res.data;
+}

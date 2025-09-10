@@ -5,6 +5,7 @@ import InsightsPanel from "@/components/InsightsPanel";
 import AuthPanel from "@/components/AuthPanel";
 import PinSetup from "@/components/security/PinSetup";
 import JournalModal from "@/components/JournalModal";
+import ChatPanel from "@/components/ChatPanel";
 import { listJournals, createJournal, me } from "@/lib/api";
 
 interface JournalItem { id:number; user_id:string; created_at:string; text:string }
@@ -83,12 +84,18 @@ export default function OverlayPanel() {
         }}
       >
         <div style={{display:"flex", gap:8, padding:12}}>
+          <Tab label="Chat" active={activeTab==="chat"} onClick={()=>openTab("chat")} />
           <Tab label="Journaling" active={activeTab==="journal"} onClick={()=>openTab("journal")} />
           <Tab label="Risk Score" active={activeTab==="risk"} onClick={()=>openTab("risk")} />
           <Tab label="Login" active={activeTab==="security"} onClick={()=>openTab("security")} />
         </div>
 
         <div style={{overflow:"auto", padding:12}}>
+          {activeTab === "chat" && (
+            <div style={{height: "calc(100vh - 120px)"}}>
+              <ChatPanel />
+            </div>
+          )}
           {activeTab === "journal" && (
             <div style={{display:"grid", gap:12}}>
               <button onClick={()=> authed && setJournalOpen(true)} disabled={!authed} style={{padding:"8px 12px", opacity: authed? 1: .6}}>New Journal</button>
