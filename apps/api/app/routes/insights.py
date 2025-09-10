@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import func, and_
+from sqlalchemy import func, and_, desc
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
 from ..db import get_db
@@ -10,6 +10,7 @@ from ..crypto import decrypt_text
 import yaml
 from pathlib import Path
 import re
+import json
 
 router = APIRouter()
 
@@ -32,7 +33,7 @@ class RiskEvaluator:
             print(f"Error loading risk rules: {e}")
             return {}
     
-    def evaluate_user_risk(self, db: Session, user_id: str) -> Dict[str, Any]:
+    def evaluate_user_risk(self, db: Session, user_id: str, save_snapshot: bool = True) -> Dict[str, Any]:
         """Evaluate risk for a specific user"""
         if not self.rules:
             return {"score": 0.0, "reasons": ["No risk rules loaded"], "level": "unknown"}
@@ -61,14 +62,132 @@ class RiskEvaluator:
         # Determine risk level
         risk_level = self._determine_risk_level(final_score)
         
-        return {
+        result = {
             "score": round(final_score, 3),
             "level": risk_level,
             "reasons": reasons,
             "feature_scores": feature_scores,
             "weights": self.weights,
-            "thresholds": self.thresholds
+            "thresholds": self.thresholds,
+            "timestamp": datetime.utcnow().isoformat()
         }
+        
+        # Save snapshot to database for historical tracking
+        if save_snapshot and user_id != "demo":
+            self._save_risk_snapshot(db, user_id, result)
+        
+        return result
+    
+    def _save_risk_snapshot(self, db: Session, user_id: str, risk_data: Dict[str, Any]):
+        """Save risk snapshot to database for historical tracking"""
+        try:
+            snapshot = models.RiskSnapshot(
+                user_id=user_id,
+                score=risk_data["score"],
+                level=risk_data["level"],
+                feature_scores=risk_data["feature_scores"],
+                reasons=risk_data["reasons"],
+                weights=risk_data["weights"],
+                thresholds=risk_data["thresholds"]
+            )
+            db.add(snapshot)
+            db.commit()
+        except Exception as e:
+            print(f"Error saving risk snapshot: {e}")
+            db.rollback()
+    
+    def get_risk_history(self, db: Session, user_id: str, days: int = 30) -> List[Dict[str, Any]]:
+        """Get historical risk data for sparkline trends"""
+        if user_id == "demo":
+            # Return demo data for sparkline
+            base_time = datetime.utcnow()
+            demo_data = []
+            for i in range(7):
+                demo_data.append({
+                    "timestamp": (base_time - timedelta(days=6-i)).isoformat(),
+                    "score": 0.2 + (i * 0.05) + (0.1 if i % 2 == 0 else 0),
+                    "level": "low"
+                })
+            return demo_data
+        
+        try:
+            cutoff_date = datetime.utcnow() - timedelta(days=days)
+            snapshots = db.query(models.RiskSnapshot).filter(
+                and_(
+                    models.RiskSnapshot.user_id == user_id,
+                    models.RiskSnapshot.created_at >= cutoff_date
+                )
+            ).order_by(models.RiskSnapshot.created_at).all()
+            
+            return [{
+                "timestamp": snapshot.created_at.isoformat(),
+                "score": snapshot.score,
+                "level": snapshot.level
+            } for snapshot in snapshots]
+        except Exception as e:
+            print(f"Error getting risk history: {e}")
+            return []
+    
+    def get_risk_changes(self, db: Session, user_id: str) -> Dict[str, Any]:
+        """Get risk changes compared to previous assessment"""
+        if user_id == "demo":
+            return {
+                "has_previous": True,
+                "score_change": 0.05,
+                "level_change": None,
+                "new_reasons": ["Demo: Slight increase in demo data"],
+                "resolved_reasons": [],
+                "feature_changes": {
+                    "mood_drop_7d": {"old": 0.2, "new": 0.25, "change": 0.05},
+                    "safety_low": {"old": 0.3, "new": 0.3, "change": 0.0}
+                }
+            }
+        
+        try:
+            # Get last two snapshots
+            snapshots = db.query(models.RiskSnapshot).filter(
+                models.RiskSnapshot.user_id == user_id
+            ).order_by(desc(models.RiskSnapshot.created_at)).limit(2).all()
+            
+            if len(snapshots) < 2:
+                return {"has_previous": False}
+            
+            current, previous = snapshots[0], snapshots[1]
+            
+            # Calculate changes
+            score_change = current.score - previous.score
+            level_change = current.level if current.level != previous.level else None
+            
+            # Find new and resolved reasons
+            current_reasons = set(current.reasons)
+            previous_reasons = set(previous.reasons)
+            new_reasons = list(current_reasons - previous_reasons)
+            resolved_reasons = list(previous_reasons - current_reasons)
+            
+            # Calculate feature changes
+            feature_changes = {}
+            for feature, current_score in current.feature_scores.items():
+                previous_score = previous.feature_scores.get(feature, 0.0)
+                change = current_score - previous_score
+                if abs(change) > 0.01:  # Only show significant changes
+                    feature_changes[feature] = {
+                        "old": previous_score,
+                        "new": current_score,
+                        "change": change
+                    }
+            
+            return {
+                "has_previous": True,
+                "score_change": round(score_change, 3),
+                "level_change": level_change,
+                "new_reasons": new_reasons,
+                "resolved_reasons": resolved_reasons,
+                "feature_changes": feature_changes,
+                "previous_timestamp": previous.created_at.isoformat()
+            }
+        except Exception as e:
+            print(f"Error getting risk changes: {e}")
+            return {"has_previous": False}
     
     def _evaluate_feature(self, db: Session, user_id: str, feature_name: str, feature_rule: str) -> tuple[float, Optional[str]]:
         """Evaluate a single feature based on the rule"""
@@ -244,6 +363,18 @@ def get_risk_score(user_id: str = Depends(get_current_user_id), db: Session = De
     result = risk_evaluator.evaluate_user_risk(db, user_id)
     print(f"DEBUG: Risk evaluation result: {result}")
     return result
+
+@router.get("/risk/history")
+def get_risk_history(days: int = 30, user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
+    """Get historical risk data for sparkline trends"""
+    print(f"DEBUG: Risk history requested for user_id: {user_id}, days: {days}")
+    return {"history": risk_evaluator.get_risk_history(db, user_id, days)}
+
+@router.get("/risk/changes")
+def get_risk_changes(user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
+    """Get risk changes compared to previous assessment"""
+    print(f"DEBUG: Risk changes requested for user_id: {user_id}")
+    return risk_evaluator.get_risk_changes(db, user_id)
 
 @router.get("/risk/rules")
 def get_risk_rules():

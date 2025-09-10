@@ -49,7 +49,17 @@ export async function deleteJournal(id: number) {
 // Risk evaluation functions
 export async function getRiskScore() {
   const res = await api.get(`/insights/risk`);
-  return res.data; // { score, level, reasons, feature_scores, weights, thresholds }
+  return res.data; // { score, level, reasons, feature_scores, weights, thresholds, timestamp }
+}
+
+export async function getRiskHistory(days: number = 30) {
+  const res = await api.get(`/insights/risk/history?days=${days}`);
+  return res.data; // { history: [{ timestamp, score, level }] }
+}
+
+export async function getRiskChanges() {
+  const res = await api.get(`/insights/risk/changes`);
+  return res.data; // { has_previous, score_change, level_change, new_reasons, resolved_reasons, feature_changes }
 }
 
 export async function getRiskRules() {

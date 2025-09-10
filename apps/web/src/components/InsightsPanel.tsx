@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useImperativeHandle, forwardRef } from "react";
-import { getRiskScore, exportTableau, exportFullData, listExports } from "@/lib/api";
+import { getRiskScore, getRiskHistory, getRiskChanges, exportTableau, exportFullData, listExports } from "@/lib/api";
 
 interface RiskData {
   score: number;
@@ -9,6 +9,23 @@ interface RiskData {
   feature_scores: Record<string, number>;
   weights: Record<string, number>;
   thresholds: Record<string, number>;
+  timestamp?: string;
+}
+
+interface RiskHistoryPoint {
+  timestamp: string;
+  score: number;
+  level: string;
+}
+
+interface RiskChanges {
+  has_previous: boolean;
+  score_change?: number;
+  level_change?: string;
+  new_reasons?: string[];
+  resolved_reasons?: string[];
+  feature_changes?: Record<string, {old: number, new: number, change: number}>;
+  previous_timestamp?: string;
 }
 
 interface ExportData {
@@ -25,6 +42,8 @@ export interface InsightsPanelRef {
 
 const InsightsPanel = forwardRef<InsightsPanelRef>((props, ref) => {
   const [riskData, setRiskData] = useState<RiskData | null>(null);
+  const [riskHistory, setRiskHistory] = useState<RiskHistoryPoint[]>([]);
+  const [riskChanges, setRiskChanges] = useState<RiskChanges | null>(null);
   const [exports, setExports] = useState<ExportData[]>([]);
   const [loading, setLoading] = useState(false);
   const [riskLoading, setRiskLoading] = useState(false);
@@ -33,8 +52,14 @@ const InsightsPanel = forwardRef<InsightsPanelRef>((props, ref) => {
   async function loadRiskData() {
     setRiskLoading(true);
     try {
-      const data = await getRiskScore();
-      setRiskData(data);
+      const [riskData, historyData, changesData] = await Promise.all([
+        getRiskScore(),
+        getRiskHistory(7), // Last 7 days for sparkline
+        getRiskChanges()
+      ]);
+      setRiskData(riskData);
+      setRiskHistory(historyData.history || []);
+      setRiskChanges(changesData);
     } catch (e: any) {
       setError("Failed to load risk data");
     } finally {
@@ -106,6 +131,177 @@ const InsightsPanel = forwardRef<InsightsPanelRef>((props, ref) => {
     }
   };
 
+  const formatTimestamp = (timestamp?: string) => {
+    if (!timestamp) return 'Unknown';
+    return new Date(timestamp).toLocaleString();
+  };
+
+  const SparklineChart = ({ data }: { data: RiskHistoryPoint[] }) => {
+    if (data.length < 2) return <div style={{fontSize: 12, opacity: 0.7}}>Not enough data</div>;
+    
+    const maxScore = Math.max(...data.map(d => d.score));
+    const minScore = Math.min(...data.map(d => d.score));
+    const range = maxScore - minScore || 0.1;
+    
+    const points = data.map((point, i) => {
+      const x = (i / (data.length - 1)) * 100;
+      const y = 100 - ((point.score - minScore) / range) * 100;
+      return `${x},${y}`;
+    }).join(' ');
+    
+    return (
+      <div style={{display: 'flex', alignItems: 'center', gap: 8}}>
+        <svg width="80" height="24" viewBox="0 0 100 100" style={{border: '1px solid #e5e7eb', borderRadius: 4}}>
+          <polyline
+            points={points}
+            fill="none"
+            stroke="#3b82f6"
+            strokeWidth="2"
+            vectorEffect="non-scaling-stroke"
+          />
+          {data.map((point, i) => {
+            const x = (i / (data.length - 1)) * 100;
+            const y = 100 - ((point.score - minScore) / range) * 100;
+            const color = getRiskLevelColor(point.level);
+            return (
+              <circle
+                key={i}
+                cx={x}
+                cy={y}
+                r="2"
+                fill={color}
+                vectorEffect="non-scaling-stroke"
+              />
+            );
+          })}
+        </svg>
+        <div style={{fontSize: 11, opacity: 0.7}}>
+          {data.length} points, 7 days
+        </div>
+      </div>
+    );
+  };
+
+  const FeatureBar = ({ name, score, weight, maxScore = 1 }: { name: string, score: number, weight: number, maxScore?: number }) => {
+    const percentage = (score / maxScore) * 100;
+    const weightedContribution = score * weight;
+    
+    return (
+      <div style={{display: 'grid', gap: 4}}>
+        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+          <span style={{fontSize: 13}}>{name.replace(/_/g, ' ')}</span>
+          <div style={{display: 'flex', gap: 8, fontSize: 12, opacity: 0.7}}>
+            <span>Score: {score.toFixed(3)}</span>
+            <span>Weight: {(weight * 100).toFixed(0)}%</span>
+            <span>Impact: {weightedContribution.toFixed(3)}</span>
+          </div>
+        </div>
+        <div style={{position: 'relative', height: 8, backgroundColor: '#f3f4f6', borderRadius: 4, overflow: 'hidden'}}>
+          <div 
+            style={{
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              height: '100%',
+              width: `${Math.min(percentage, 100)}%`,
+              backgroundColor: score > 0.6 ? '#dc2626' : score > 0.3 ? '#ea580c' : '#16a34a',
+              borderRadius: 4,
+              transition: 'width 0.3s ease'
+            }}
+          />
+        </div>
+      </div>
+    );
+  };
+
+  const RiskChangesDisplay = ({ changes }: { changes: RiskChanges }) => {
+    if (!changes.has_previous) {
+      return <div style={{fontSize: 12, opacity: 0.7}}>No previous assessment for comparison</div>;
+    }
+
+    return (
+      <div style={{display: 'grid', gap: 8}}>
+        <div style={{display: 'flex', alignItems: 'center', gap: 8}}>
+          <span style={{fontSize: 13, fontWeight: 'bold'}}>Changes since last assessment:</span>
+          {changes.previous_timestamp && (
+            <span style={{fontSize: 11, opacity: 0.7}}>
+              {formatTimestamp(changes.previous_timestamp)}
+            </span>
+          )}
+        </div>
+        
+        {changes.score_change !== undefined && (
+          <div style={{display: 'flex', alignItems: 'center', gap: 8}}>
+            <span style={{fontSize: 12}}>Score:</span>
+            <span style={{
+              fontSize: 12,
+              fontWeight: 'bold',
+              color: changes.score_change > 0 ? '#dc2626' : changes.score_change < 0 ? '#16a34a' : '#6b7280'
+            }}>
+              {changes.score_change > 0 ? '+' : ''}{changes.score_change.toFixed(3)}
+              {changes.score_change > 0 ? ' ↗️' : changes.score_change < 0 ? ' ↘️' : ' →'}
+            </span>
+          </div>
+        )}
+        
+        {changes.level_change && (
+          <div style={{display: 'flex', alignItems: 'center', gap: 8}}>
+            <span style={{fontSize: 12}}>Level changed to:</span>
+            <span style={{
+              fontSize: 12,
+              fontWeight: 'bold',
+              color: getRiskLevelColor(changes.level_change)
+            }}>
+              {getRiskLevelLabel(changes.level_change)}
+            </span>
+          </div>
+        )}
+        
+        {changes.new_reasons && changes.new_reasons.length > 0 && (
+          <div>
+            <div style={{fontSize: 12, fontWeight: 'bold', color: '#dc2626'}}>New concerns:</div>
+            <ul style={{margin: '4px 0', paddingLeft: 16, fontSize: 11}}>
+              {changes.new_reasons.map((reason, i) => (
+                <li key={i}>{reason}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        
+        {changes.resolved_reasons && changes.resolved_reasons.length > 0 && (
+          <div>
+            <div style={{fontSize: 12, fontWeight: 'bold', color: '#16a34a'}}>Resolved:</div>
+            <ul style={{margin: '4px 0', paddingLeft: 16, fontSize: 11}}>
+              {changes.resolved_reasons.map((reason, i) => (
+                <li key={i}>{reason}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        
+        {changes.feature_changes && Object.keys(changes.feature_changes).length > 0 && (
+          <div>
+            <div style={{fontSize: 12, fontWeight: 'bold'}}>Feature changes:</div>
+            <div style={{display: 'grid', gap: 2, marginTop: 4}}>
+              {Object.entries(changes.feature_changes).map(([feature, change]) => (
+                <div key={feature} style={{display: 'flex', justifyContent: 'space-between', fontSize: 11}}>
+                  <span>{feature.replace(/_/g, ' ')}:</span>
+                  <span style={{
+                    fontWeight: 'bold',
+                    color: change.change > 0 ? '#dc2626' : '#16a34a'
+                  }}>
+                    {change.old.toFixed(3)} → {change.new.toFixed(3)} 
+                    ({change.change > 0 ? '+' : ''}{change.change.toFixed(3)})
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div style={{display:"grid", gap:16, maxWidth:600}}>
       <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
@@ -129,6 +325,14 @@ const InsightsPanel = forwardRef<InsightsPanelRef>((props, ref) => {
       
       {riskData ? (
         <div style={{display:"grid", gap:12, padding:16, border:"1px solid #e5e7eb", borderRadius:8}}>
+          {/* Header with timestamp and sparkline */}
+          <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
+            <div style={{fontSize:12, opacity:0.7}}>
+              Last updated: {formatTimestamp(riskData.timestamp)}
+            </div>
+            <SparklineChart data={riskHistory} />
+          </div>
+          
           <div style={{display:"flex", alignItems:"center", gap:16}}>
             <div style={{position:"relative", width:64, height:64}} aria-label="Risk score donut">
               <svg width="64" height="64" viewBox="0 0 42 42">
@@ -149,6 +353,16 @@ const InsightsPanel = forwardRef<InsightsPanelRef>((props, ref) => {
             </div>
           </div>
           
+          {/* Risk Changes Section */}
+          {riskChanges && (
+            <div>
+              <div style={{fontWeight:"bold", marginBottom:8}}>Assessment Changes:</div>
+              <div style={{padding:12, backgroundColor:"#f9fafb", borderRadius:6}}>
+                <RiskChangesDisplay changes={riskChanges} />
+              </div>
+            </div>
+          )}
+          
           {riskData.reasons.length > 0 && (
             <div>
               <div style={{fontWeight:"bold", marginBottom:8}}>Factors:</div>
@@ -162,13 +376,15 @@ const InsightsPanel = forwardRef<InsightsPanelRef>((props, ref) => {
           
           {Object.keys(riskData.feature_scores).length > 0 && (
             <div>
-              <div style={{fontWeight:"bold", marginBottom:8}}>Feature Scores:</div>
-              <div style={{display:"grid", gap:4}}>
+              <div style={{fontWeight:"bold", marginBottom:8}}>Feature Analysis:</div>
+              <div style={{display:"grid", gap:8}}>
                 {Object.entries(riskData.feature_scores).map(([feature, score]) => (
-                  <div key={feature} style={{display:"flex", justifyContent:"space-between"}}>
-                    <span style={{fontSize:14}}>{feature.replace(/_/g, ' ')}:</span>
-                    <span style={{fontSize:14, fontWeight:"bold"}}>{score.toFixed(3)}</span>
-                  </div>
+                  <FeatureBar 
+                    key={feature} 
+                    name={feature} 
+                    score={score} 
+                    weight={riskData.weights[feature] || 0}
+                  />
                 ))}
               </div>
             </div>
