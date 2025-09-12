@@ -155,6 +155,59 @@ Open the app at `http://127.0.0.1:3000`. The web app talks to the API at `http:/
 - `GET /journals/` - List user's journals
 - `POST /journals/` - Create a new journal entry
 
+## Data Collection via Chat Context
+
+In Chat → Show Context, you can capture structured fields that feed analytics and Salesforce Data Cloud:
+- Jurisdiction, Children Present, Confidentiality, Share With
+- Location Type (home, work, public, online, unknown)
+- Recent Escalation (yes, no, unsure)
+- Substance Use (yes, no, unsure)
+- Threats to Kill (yes/no) and Access to Weapons (yes/no)
+
+These are saved with each chat turn into `chat_events` (booleans on top-level columns where available, additional items in `extra_json`).
+
+## Per-user Dataset Exports (JSON/CSV)
+
+After logging in, you can download your datasets aligned to Salesforce Data Cloud schema:
+- `GET /exports/dataset/chat_events.json` | `.csv`
+- `GET /exports/dataset/risk_snapshots.json` | `.csv`
+- `GET /exports/dataset/user_profiles.json` | `.csv`
+- `GET /exports/dataset/journals_public.json` | `.csv`
+
+Example (with cookies):
+```bash
+# Login to set session cookie
+curl -i -c cookies.txt -b cookies.txt -H "Content-Type: application/json" \
+  -d '{"email":"jane.d001@example.com","password":"Passw0rd!001"}' \
+  http://127.0.0.1:8000/auth/login
+
+# Download per-dataset
+curl -b cookies.txt http://127.0.0.1:8000/exports/dataset/chat_events.json | jq > chat_events.json
+curl -b cookies.txt http://127.0.0.1:8000/exports/dataset/chat_events.csv  -o chat_events.csv
+curl -b cookies.txt http://127.0.0.1:8000/exports/dataset/risk_snapshots.json | jq > risk_snapshots.json
+curl -b cookies.txt http://127.0.0.1:8000/exports/dataset/user_profiles.json | jq > user_profiles.json
+curl -b cookies.txt http://127.0.0.1:8000/exports/dataset/journals_public.json | jq > journals_public.json
+```
+
+## Manual Flat CSV for Tableau Testing
+
+A one-row-per-user CSV with key profile, snapshot, and recent context fields is available via a script:
+
+```bash
+cd apps/api
+source .venv/bin/activate
+python scripts/export_all_users_csv.py
+```
+
+Output path:
+- `apps/exports/tableau_manual/users_flat_<YYYY-MM-DD>.csv`
+
+Columns:
+- `user_id,email,created_at,age,gender,relationship_status,num_children,`
+  `victim_housing,has_trusted_support,default_confidentiality,default_share_with,`
+  `risk_score,risk_level,snapshot_at,journals_count,events_count,events_last7,avg_sentiment,avg_risk_points,`
+  `recent_escalation,threats_to_kill,weapon_involved,substance_use`
+
 ## Development
 
 ### Project Structure
@@ -218,3 +271,27 @@ Please read the TODO.md file for detailed development roadmap and contribution g
 ## License
 
 This project is designed for supporting individuals in need. Please use responsibly and ethically.
+
+
+## created users
+Seeded credentials (emails → passwords)
+jane.d001@example.com → Passw0rd!001
+maya.p002@example.com → Passw0rd!002
+alex.r003@example.com → Passw0rd!003
+jordan.k004@example.com → Passw0rd!004
+rosa.m005@example.com → Passw0rd!005
+liam.t006@example.com → Passw0rd!006
+priya.n007@example.com → Passw0rd!007
+sam.w008@example.com → Passw0rd!008
+aisha.l009@example.com → Passw0rd!009
+diego.s010@example.com → Passw0rd!010
+noor.c011@example.com → Passw0rd!011
+ethan.v012@example.com → Passw0rd!012
+grace.h013@example.com → Passw0rd!013
+chen.y014@example.com → Passw0rd!014
+omar.z015@example.com → Passw0rd!015
+sofia.g016@example.com → Passw0rd!016
+maria.j017@example.com → Passw0rd!017
+natalie.b018@example.com → Passw0rd!018
+tyrese.q019@example.com → Passw0rd!019
+helena.f020@example.com → Passw0rd!020

@@ -47,6 +47,11 @@ class ChatMessageCreate(BaseModel):
     children_present: bool | None = None
     confidentiality: str | None = None  # 'private' | 'advocate_only' | 'share_with_attorney'
     share_with: str | None = None       # 'nobody' | 'advocate' | 'attorney'
+    location_type: str | None = None    # 'home' | 'work' | 'public' | 'online' | 'unknown'
+    recent_escalation: str | None = None  # 'yes' | 'no' | 'unsure'
+    substance_use: str | None = None      # 'yes' | 'no' | 'unsure'
+    threats_to_kill: bool | None = None
+    weapon_involved: bool | None = None
 
 class ChatMessageResponse(BaseModel):
     id: int
@@ -210,7 +215,7 @@ def stream_chat_response(
             )
             # Attach metadata as JSON text if provided
             meta: Dict[str, Any] = {}
-            for k in ["jurisdiction","children_present","confidentiality","share_with"]:
+            for k in ["jurisdiction","children_present","confidentiality","share_with","location_type","recent_escalation","substance_use","threats_to_kill","weapon_involved"]:
                 v = getattr(payload, k, None)
                 if v is not None:
                     meta[k] = v
@@ -237,9 +242,9 @@ def stream_chat_response(
                     "risk_points": analysis.get("risk_points"),
                     "severity_score": analysis.get("severity_score"),
                     "escalation_index": analysis.get("escalation_index"),
-                    "threats_to_kill": bool(analysis["risk_flags"].get("threats_to_kill")),
+                    "threats_to_kill": getattr(payload, "threats_to_kill", bool(analysis["risk_flags"].get("threats_to_kill"))),
                     "strangulation": bool(analysis["risk_flags"].get("strangulation")),
-                    "weapon_involved": bool(analysis["risk_flags"].get("weapon_involved")),
+                    "weapon_involved": getattr(payload, "weapon_involved", bool(analysis["risk_flags"].get("weapon_involved"))),
                     "stalking": bool(analysis["risk_flags"].get("stalking", False)),
                     "digital_surveillance": bool(analysis["risk_flags"].get("digital_surveillance", False)),
                     "model_summary": "Short neutral summary (no PII).",
@@ -247,8 +252,15 @@ def stream_chat_response(
                     "share_with": getattr(payload, "share_with", None),
                     "extra_json": None,
                 }
-                # Compose extra_json from any additional conversational fields if present in meta_json
-                # (We already merged some in user_msg.meta_json; reuse it if available)
+                # Include recent_escalation and substance_use into extra_json
+                extra: Dict[str, Any] = {}
+                if getattr(payload, "recent_escalation", None) is not None:
+                    extra["recent_escalation"] = payload.recent_escalation
+                if getattr(payload, "substance_use", None) is not None:
+                    extra["substance_use"] = payload.substance_use
+                if extra:
+                    event_payload["extra_json"] = json.dumps(extra)
+                # If meta_json exists, prefer including it entirely
                 if getattr(user_msg, "meta_json", None):
                     event_payload["extra_json"] = user_msg.meta_json
 
@@ -296,61 +308,75 @@ def stream_chat_response(
             
             # Get AI response
             oai = get_openai_client()
+            assistant_content = ""
+            
             if oai:
                 try:
-                    # Choose prompt based on risk and tone
-                    user_text_lower = payload.message.lower().strip()
-                    is_greeting = user_text_lower in {"hi","hello","hey","hiya","yo"}
+                    # Natural conversational context - let the AI respond naturally
                     risk_is_high = is_high_risk(analysis["risk_flags"])
+                    
                     if risk_is_high:
-                        system_prompt = (
-                            "You are a supportive, non-clinical emotional support assistant for domestic violence survivors. "
-                            "Be empathetic, succinct, and non-judgmental. Avoid medical/legal advice. "
-                            "If there are safety risks (threats, strangulation, weapons), provide calm, direct guidance to seek immediate help from local emergency services. "
-                            "Keep responses under 120 words."
-                        )
-                    elif is_greeting:
-                        system_prompt = (
-                            "You are a warm, concise support companion. When greeted, reply briefly and invite the person to share how they're feeling or what they'd like help with. "
-                            "Do not mention emergency services or resources unless the user brings up danger or asks for resources. Keep responses under 60 words."
-                        )
+                        safety_context = " The user may be in a dangerous situation involving threats, weapons, or strangulation."
                     else:
-                        system_prompt = (
-                            "You are a supportive, non-clinical emotional support assistant. Be empathetic, succinct, and non-judgmental. "
-                            "Offer optional next steps only if asked. Do not mention emergency services unless the user describes imminent danger. Keep responses under 100 words."
-                        )
+                        safety_context = ""
                     
-                    # Build messages with system prompt
-                    openai_messages = [{"role": "system", "content": system_prompt}]
-                    for msg in messages[1:]:  # Skip the first system message
-                        openai_messages.append(msg)
+                    system_prompt = (
+                        "You are a compassionate and experienced support companion for people experiencing domestic violence. "
+                        "Engage in natural conversation - respond authentically to what they share, ask thoughtful follow-up questions, "
+                        "and provide emotional validation. You're not a therapist, but you understand trauma and can offer practical support. "
+                        f"Be genuinely caring, listen actively, and help them feel heard and supported.{safety_context} "
+                        "If someone is in immediate danger, gently suggest they consider calling emergency services. "
+                        "Respond conversationally as you would to a friend who trusts you with something difficult."
+                    )
                     
-                    chat = oai.chat.completions.create(
+                    # Build conversation history properly
+                    conversation = [{"role": "system", "content": system_prompt}]
+                    
+                    # Add recent conversation context (limit to last 6 messages for context)
+                    for msg in messages[-6:]:
+                        conversation.append(msg)
+                    
+                    # Add current user message
+                    conversation.append({"role": "user", "content": payload.message})
+                    
+                    print(f"Sending to OpenAI: {len(conversation)} messages, model: {os.getenv('OPENAI_MODEL', 'gpt-4o-mini')}")
+                    
+                    response = oai.chat.completions.create(
                         model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
-                        messages=openai_messages,
-                        temperature=0.3,
+                        messages=conversation,
+                        temperature=0.8,
+                        max_tokens=300,
                         stream=True
                     )
                     
-                    assistant_content = ""
-                    for chunk in chat:
+                    for chunk in response:
                         if chunk.choices[0].delta.content:
                             content = chunk.choices[0].delta.content
                             assistant_content += content
                             yield f"data: {json.dumps({'type': 'content', 'content': content})}\n\n"
                     
-                    # If no content was streamed, use fallback
+                    print(f"OpenAI response length: {len(assistant_content)}")
+                    
+                    # Fallback if no content
                     if not assistant_content.strip():
-                        assistant_content = "I'm here to support you. How can I help you today?"
+                        assistant_content = "I'm here with you. What's on your mind today?"
                         yield f"data: {json.dumps({'type': 'content', 'content': assistant_content})}\n\n"
                         
                 except Exception as e:
-                    print(f"OpenAI error: {e}")  # Debug logging
-                    assistant_content = "I'm here to support you. How can I help you today?"
-                    yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+                    print(f"OpenAI API error: {e}")
+                    assistant_content = "I'm here to listen and support you. What would you like to talk about?"
+                    yield f"data: {json.dumps({'type': 'content', 'content': assistant_content})}\n\n"
             else:
-                print("No OpenAI client available")  # Debug logging
-                assistant_content = "I'm here to support you. How can I help you today?"
+                print("OpenAI client not available - using fallback")
+                # Contextual fallbacks based on analysis
+                if analysis.get("intent") == "safety_planning":
+                    assistant_content = "I can help you think through safety planning. What's your current living situation?"
+                elif analysis.get("intent") == "seek_legal_info":
+                    assistant_content = "For legal questions, I'd recommend connecting with a domestic violence legal advocate who can provide specific guidance for your situation."
+                elif is_high_risk(analysis["risk_flags"]):
+                    assistant_content = "I'm concerned for your safety. If you're in immediate danger, please consider calling 911 or your local emergency services."
+                else:
+                    assistant_content = "I'm here to listen and support you. Can you tell me more about what's on your mind?"
                 yield f"data: {json.dumps({'type': 'content', 'content': assistant_content})}\n\n"
             
             # Store assistant response

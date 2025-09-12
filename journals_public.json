@@ -1,0 +1,29 @@
+{
+  "dataset": "journals_public",
+  "records": [
+    {
+      "journal_id": "1",
+      "user_id_hash": "5e2f18f6a8b2a6d851a11c1b",
+      "created_at": "2025-09-02T19:31:44.712850+00:00",
+      "mood": null,
+      "tags": null,
+      "text_redacted": "Short neutral summary (no PII)."
+    },
+    {
+      "journal_id": "2",
+      "user_id_hash": "5e2f18f6a8b2a6d851a11c1b",
+      "created_at": "2025-09-05T19:31:44.712850+00:00",
+      "mood": null,
+      "tags": null,
+      "text_redacted": "Short neutral summary (no PII)."
+    },
+    {
+      "journal_id": "3",
+      "user_id_hash": "5e2f18f6a8b2a6d851a11c1b",
+      "created_at": "2025-09-08T19:31:44.712850+00:00",
+      "mood": null,
+      "tags": null,
+      "text_redacted": "Short neutral summary (no PII)."
+    }
+  ]
+}

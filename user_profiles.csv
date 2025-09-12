@@ -1,0 +1,2 @@
+user_id_hash,age,gender,relationship_status,victim_housing,has_trusted_support,default_confidentiality,default_share_with,jurisdiction_default,children_present_default
+5e2f18f6a8b2a6d851a11c1b,34,female,married,with_abuser,False,advocate_only,advocate,,

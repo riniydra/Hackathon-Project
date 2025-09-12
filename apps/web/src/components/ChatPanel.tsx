@@ -40,6 +40,11 @@ export default function ChatPanel() {
   const [childrenPresent, setChildrenPresent] = useState<""|"yes"|"no"|"prefer_not">("");
   const [confidentiality, setConfidentiality] = useState<"private"|"advocate_only"|"share_with_attorney"|"">("");
   const [shareWith, setShareWith] = useState<"nobody"|"advocate"|"attorney"|"">("");
+  const [locationType, setLocationType] = useState<"home"|"work"|"public"|"online"|"unknown"|"">("");
+  const [recentEscalation, setRecentEscalation] = useState<"yes"|"no"|"unsure"|"">("");
+  const [substanceUse, setSubstanceUse] = useState<"yes"|"no"|"unsure"|"">("");
+  const [threatsFlag, setThreatsFlag] = useState<"yes"|"no"|"unsure"|"">("");
+  const [weaponFlag, setWeaponFlag] = useState<"yes"|"no"|"unsure"|"">("");
   const [showContext, setShowContext] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -191,6 +196,11 @@ export default function ChatPanel() {
           children_present: childrenPresent === "" ? null : (childrenPresent === "yes" ? true : childrenPresent === "no" ? false : null),
           confidentiality: confidentiality || undefined,
           share_with: shareWith || undefined,
+          location_type: locationType || undefined,
+          recent_escalation: recentEscalation || undefined,
+          substance_use: substanceUse || undefined,
+          threats_to_kill: threatsFlag === "" ? null : (threatsFlag === "yes" ? true : threatsFlag === "no" ? false : null),
+          weapon_involved: weaponFlag === "" ? null : (weaponFlag === "yes" ? true : weaponFlag === "no" ? false : null),
         }
       );
     } catch (e: any) {
@@ -475,6 +485,43 @@ export default function ChatPanel() {
               <option value="nobody">Nobody</option>
               <option value="advocate">Advocate</option>
               <option value="attorney">Attorney</option>
+            </select>
+            <select value={locationType} onChange={(e)=>setLocationType(e.target.value as any)}
+              style={{ padding:"6px 8px", border:`1px solid ${colors.border}`, borderRadius:radii.md, fontSize:12, background:'#fff' }}>
+              <option value="">Location Type</option>
+              <option value="home">Home</option>
+              <option value="work">Work</option>
+              <option value="public">Public</option>
+              <option value="online">Online</option>
+              <option value="unknown">Unknown</option>
+            </select>
+            <select value={recentEscalation} onChange={(e)=>setRecentEscalation(e.target.value as any)}
+              style={{ padding:"6px 8px", border:`1px solid ${colors.border}`, borderRadius:radii.md, fontSize:12, background:'#fff' }}>
+              <option value="">Recent Escalation?</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+              <option value="unsure">Unsure</option>
+            </select>
+            <select value={substanceUse} onChange={(e)=>setSubstanceUse(e.target.value as any)}
+              style={{ padding:"6px 8px", border:`1px solid ${colors.border}`, borderRadius:radii.md, fontSize:12, background:'#fff' }}>
+              <option value="">Substance Use?</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+              <option value="unsure">Unsure</option>
+            </select>
+            <select value={threatsFlag} onChange={(e)=>setThreatsFlag(e.target.value as any)}
+              style={{ padding:"6px 8px", border:`1px solid ${colors.border}`, borderRadius:radii.md, fontSize:12, background:'#fff' }}>
+              <option value="">Threats to Kill?</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+              <option value="unsure">Unsure</option>
+            </select>
+            <select value={weaponFlag} onChange={(e)=>setWeaponFlag(e.target.value as any)}
+              style={{ padding:"6px 8px", border:`1px solid ${colors.border}`, borderRadius:radii.md, fontSize:12, background:'#fff' }}>
+              <option value="">Access to Weapons?</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+              <option value="unsure">Unsure</option>
             </select>
           </div>
         )}

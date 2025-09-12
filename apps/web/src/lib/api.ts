@@ -68,7 +68,16 @@ export async function verifyPin(pin: string) {
   return res.data as { ok: boolean; duress?: boolean };
 }
 
-export async function updateProfile(fields: { gender?: string|null; relationship_status?: string|null; num_children?: number|null }) {
+export async function updateProfile(fields: { 
+  gender?: string|null; 
+  relationship_status?: string|null; 
+  num_children?: number|null;
+  age?: number|null;
+  victim_housing?: string|null;
+  has_trusted_support?: boolean|null;
+  default_confidentiality?: string|null;
+  default_share_with?: string|null;
+}) {
   const res = await api.post(`/auth/profile`, fields);
   return res.data;
 }
@@ -149,7 +158,7 @@ export async function streamChatMessage(
   message: string,
   sessionId?: string,
   onEvent?: (event: ChatStreamEvent) => void,
-  meta?: { jurisdiction?: string; children_present?: boolean|null; confidentiality?: string; share_with?: string }
+  meta?: { jurisdiction?: string; children_present?: boolean|null; confidentiality?: string; share_with?: string; location_type?: string; recent_escalation?: string; substance_use?: string; threats_to_kill?: boolean|null; weapon_involved?: boolean|null }
 ): Promise<string> {
   const response = await fetch(`${BASE}/chat/stream`, {
     method: 'POST',

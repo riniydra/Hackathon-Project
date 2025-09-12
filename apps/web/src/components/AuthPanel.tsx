@@ -30,6 +30,7 @@ export default function AuthPanel({ onAuth }: { onAuth?: () => void }) {
     try {
       if (mode === "signup") {
         await signup(email, password);
+        // After signup, we are already logged in; open onboarding starting at PIN step
         setOnboardOpen(true);
       } else {
         await login(email, password);
@@ -81,7 +82,7 @@ export default function AuthPanel({ onAuth }: { onAuth?: () => void }) {
           <div style={{fontSize:12, opacity:.7}}>New users: use Sign up, then Login</div>
         </div>
       )}
-      <OnboardingWizard open={onboardOpen} onClose={()=>setOnboardOpen(false)} />
+      <OnboardingWizard open={onboardOpen} onClose={()=>setOnboardOpen(false)} initialStep={2} />
     </>
   );
 }

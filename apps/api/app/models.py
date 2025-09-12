@@ -13,6 +13,13 @@ class User(Base):
     gender: Mapped[str | None] = mapped_column(String(50), nullable=True)
     relationship_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
     num_children: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Alembic-added profile fields
+    age: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    victim_housing: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    has_trusted_support: Mapped[bool | None] = mapped_column(nullable=True)
+    default_confidentiality: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    default_share_with: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    safety_plan_last_updated: Mapped[str | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 class Journal(Base):
     __tablename__ = "journals"

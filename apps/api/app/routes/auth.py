@@ -102,6 +102,12 @@ class ProfileUpdate(BaseModel):
     gender: str | None = None
     relationship_status: str | None = None
     num_children: int | None = None
+    # Extended profile fields
+    age: int | None = None
+    victim_housing: str | None = None
+    has_trusted_support: bool | None = None
+    default_confidentiality: str | None = None  # 'private' | 'advocate_only' | 'share_with_attorney'
+    default_share_with: str | None = None       # 'nobody' | 'advocate' | 'attorney'
 
 
 @router.post("/profile")
@@ -117,5 +123,16 @@ def update_profile(payload: ProfileUpdate, user_id: str = Depends(get_current_us
         user.relationship_status = payload.relationship_status
     if payload.num_children is not None:
         user.num_children = payload.num_children
+    # Extended fields (guard if column exists)
+    if hasattr(user, "age") and payload.age is not None:
+        user.age = payload.age
+    if hasattr(user, "victim_housing") and payload.victim_housing is not None:
+        user.victim_housing = payload.victim_housing
+    if hasattr(user, "has_trusted_support") and payload.has_trusted_support is not None:
+        user.has_trusted_support = payload.has_trusted_support
+    if hasattr(user, "default_confidentiality") and payload.default_confidentiality is not None:
+        user.default_confidentiality = payload.default_confidentiality
+    if hasattr(user, "default_share_with") and payload.default_share_with is not None:
+        user.default_share_with = payload.default_share_with
     db.add(user); db.commit()
     return {"ok": True}

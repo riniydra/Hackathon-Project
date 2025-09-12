@@ -64,6 +64,21 @@ def upgrade() -> None:
         op.create_index("ix_chat_events_user_ts", "chat_events", ["user_id", "created_at"])
         op.create_index("ix_chat_events_type_ts", "chat_events", ["event_type", "created_at"])
 
+    # Ensure users table exists before adding columns
+    if not _has_table(conn, "users"):
+        op.create_table(
+            "users",
+            sa.Column("id", sa.Integer, primary_key=True),
+            sa.Column("email", sa.String(255), nullable=False, unique=True, index=True),
+            sa.Column("password_hash", sa.String(255), nullable=False),
+            sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+            sa.Column("pin_hash", sa.String(255), nullable=True),
+            sa.Column("duress_pin_hash", sa.String(255), nullable=True),
+            sa.Column("gender", sa.String(50), nullable=True),
+            sa.Column("relationship_status", sa.String(50), nullable=True),
+            sa.Column("num_children", sa.Integer(), nullable=True),
+        )
+
     # users columns (skip if already present)
     for col, typ in [
         ("age", sa.Integer()),
@@ -78,8 +93,8 @@ def upgrade() -> None:
         if not _has_column(conn, "users", col):
             op.add_column("users", sa.Column(col, typ, nullable=True))
 
-    # chat_messages meta_json
-    if not _has_column(conn, "chat_messages", "meta_json"):
+    # chat_messages meta_json (only if table exists)
+    if _has_table(conn, "chat_messages") and not _has_column(conn, "chat_messages", "meta_json"):
         with op.batch_alter_table("chat_messages") as b:
             b.add_column(sa.Column("meta_json", sa.Text, nullable=True))
 

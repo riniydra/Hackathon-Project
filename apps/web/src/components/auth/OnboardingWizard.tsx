@@ -1,9 +1,9 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { signup, login, setPin, updateProfile } from "@/lib/api";
 
-export default function OnboardingWizard({ open, onClose }: { open:boolean; onClose:()=>void }) {
-  const [step, setStep] = useState(0);
+export default function OnboardingWizard({ open, onClose, initialStep = 0 }: { open:boolean; onClose:()=>void; initialStep?: number }) {
+  const [step, setStep] = useState(initialStep);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [pin, setPinLocal] = useState("");
@@ -11,8 +11,18 @@ export default function OnboardingWizard({ open, onClose }: { open:boolean; onCl
   const [gender, setGender] = useState<string>("");
   const [relationship, setRelationship] = useState<string>("");
   const [children, setChildren] = useState<string>("");
+  // Extended profile
+  const [age, setAge] = useState<string>("");
+  const [housing, setHousing] = useState<string>("");
+  const [support, setSupport] = useState<string>("");
+  const [defConf, setDefConf] = useState<string>("");
+  const [defShare, setDefShare] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string|undefined>();
+
+  useEffect(() => {
+    if (open) setStep(initialStep);
+  }, [open, initialStep]);
 
   if (!open) return null;
 
@@ -32,6 +42,11 @@ export default function OnboardingWizard({ open, onClose }: { open:boolean; onCl
           gender: gender || null,
           relationship_status: relationship || null,
           num_children: children ? Number(children) : null,
+          age: age ? Number(age) : null,
+          victim_housing: housing || null,
+          has_trusted_support: support ? support === "yes" : null,
+          default_confidentiality: defConf || null,
+          default_share_with: defShare || null,
         });
       }
       setStep(s => s + 1);
@@ -87,6 +102,32 @@ export default function OnboardingWizard({ open, onClose }: { open:boolean; onCl
             <input placeholder="Gender (optional)" value={gender} onChange={e=>setGender(e.target.value)} />
             <input placeholder="Relationship status (optional)" value={relationship} onChange={e=>setRelationship(e.target.value)} />
             <input placeholder="Number of children (optional)" value={children} onChange={e=>setChildren(e.target.value)} />
+            <input placeholder="Age (optional)" value={age} onChange={e=>setAge(e.target.value.replace(/\D/g, ""))} />
+            <select value={housing} onChange={e=>setHousing(e.target.value)}>
+              <option value="">Housing (optional)</option>
+              <option value="stable">Stable</option>
+              <option value="with_abuser">With abuser</option>
+              <option value="shelter">Shelter</option>
+              <option value="friends">Friends</option>
+              <option value="unknown">Unknown</option>
+            </select>
+            <select value={support} onChange={e=>setSupport(e.target.value)}>
+              <option value="">Trusted support? (optional)</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+            <select value={defConf} onChange={e=>setDefConf(e.target.value)}>
+              <option value="">Default Confidentiality</option>
+              <option value="private">Private</option>
+              <option value="advocate_only">Advocate only</option>
+              <option value="share_with_attorney">Share with attorney</option>
+            </select>
+            <select value={defShare} onChange={e=>setDefShare(e.target.value)}>
+              <option value="">Default Share With</option>
+              <option value="nobody">Nobody</option>
+              <option value="advocate">Advocate</option>
+              <option value="attorney">Attorney</option>
+            </select>
             <div style={{display:"flex", justifyContent:"space-between"}}>
               <button onClick={()=>setStep(2)}>Back</button>
               <button onClick={next} disabled={loading}>{loading?"...":"Continue"}</button>
