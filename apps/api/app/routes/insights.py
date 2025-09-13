@@ -23,14 +23,24 @@ class RiskEvaluator:
         self.features = self.rules.get('features', {})
     
     def _load_rules(self, rules_path: Path) -> Dict[str, Any]:
-        """Load and parse risk rules from YAML file"""
-        if not rules_path.exists():
-            return {}
-        try:
-            return yaml.safe_load(rules_path.read_text(encoding="utf-8")) or {}
-        except Exception as e:
-            print(f"Error loading risk rules: {e}")
-            return {}
+        """Load and parse risk rules from YAML file (try multiple locations)."""
+        candidates = [
+            rules_path,
+            Path("/app/risk_rules.yaml"),
+            Path(__file__).resolve().parents[1] / "risk_rules.yaml",
+            Path.cwd() / "risk_rules.yaml",
+        ]
+        for p in candidates:
+            try:
+                if p.exists():
+                    data = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+                    if data:
+                        print(f"Loaded risk rules from {p}")
+                        return data
+            except Exception as e:
+                print(f"Error loading risk rules from {p}: {e}")
+        print(f"No risk rules found. Tried: {[str(c) for c in candidates]}")
+        return {}
     
     def evaluate_user_risk(self, db: Session, user_id: str) -> Dict[str, Any]:
         """Evaluate risk for a specific user"""
