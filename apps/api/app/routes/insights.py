@@ -311,9 +311,9 @@ class RiskEvaluator:
     
     def _evaluate_safety_low(self, db: Session, user_id: str) -> tuple[float, Optional[str]]:
         """Evaluate if safety level is low"""
-        # For MVP, we'll use a placeholder
-        # In production, this would use actual safety check-in data
-        return 0.3, "Safety level appears moderate (placeholder evaluation)"
+        # Until we wire real safety check-ins, do not assume risk.
+        # New users should not start with elevated safety risk.
+        return 0.0, None
     
     def _evaluate_negative_language(self, db: Session, user_id: str) -> tuple[float, Optional[str]]:
         """Evaluate negative language in recent journals"""
