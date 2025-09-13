@@ -123,6 +123,12 @@ const InsightsPanel = forwardRef<InsightsPanelRef>((props, ref) => {
     }
   };
 
+  const barColorForFeature = (feature: string, level: string, weights?: Record<string, number>) => {
+    const w = weights?.[feature] ?? 0;
+    if (w < 0) return '#16a34a'; // green for protective
+    return level === 'high' ? '#dc2626' : level === 'warn' ? '#ea580c' : colors.skyDark;
+  };
+
   const getRiskLevelLabel = (level: string) => {
     switch (level) {
       case 'high': return 'High Risk';
@@ -215,7 +221,7 @@ const InsightsPanel = forwardRef<InsightsPanelRef>((props, ref) => {
               <div style={{fontWeight:"bold", marginBottom:8}}>Feature Scores:</div>
               <div style={{display:"grid", gap:6}}>
                 {Object.entries(riskData.feature_scores || {}).map(([feature, score]) => {
-                  const pct = Math.max(0, Math.min(100, Math.round(score*100)));
+                  const pct = Math.max(0, Math.min(100, Math.round((Number(score)||0)*100)));
                   return (
                     <div key={feature}>
                       <div style={{display:"flex", justifyContent:"space-between", fontSize:12, marginBottom:4}}>
@@ -223,7 +229,7 @@ const InsightsPanel = forwardRef<InsightsPanelRef>((props, ref) => {
                         <span>{pct}%</span>
                       </div>
                       <div style={{height:8, borderRadius:4, background: colors.skyLight, border:`1px solid ${colors.border}`}}>
-                        <div style={{width:`${pct}%`, height:"100%", background:getRiskLevelColor(riskData.level), borderRadius:4}} />
+                        <div style={{width:`${pct}%`, height:"100%", background:barColorForFeature(feature, riskData.level, riskData.weights), borderRadius:4}} />
                       </div>
                     </div>
                   );

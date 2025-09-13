@@ -208,8 +208,9 @@ class RiskEvaluator:
         window = datetime.utcnow() - timedelta(days=30)
 
         phrases = [
-            'kill myself', 'end my life', 'i want to die', 'want to die', 'suicide',
-            'take my life', 'i am going to kill myself', 'end it all', 'no reason to live'
+            'kill myself','end my life','i want to die','want to die','suicide',
+            'take my life','i am going to kill myself','end it all','no reason to live',
+            'i want to end it','i can\'t go on','i don\'t want to live','die by suicide'
         ]
 
         # Check journals
@@ -254,7 +255,7 @@ class RiskEvaluator:
     def _evaluate_weapon_indicator(self, db: Session, user_id: str) -> tuple[float, Optional[str]]:
         """Detect weapon presence in journals or chat within 30 days (e.g., 'gun', 'knife', 'weapon')."""
         window = datetime.utcnow() - timedelta(days=30)
-        words = ["gun","knife","weapon","armed","pistol","rifle","shotgun","revolver"]
+        words = ["gun","knife","weapon","armed","pistol","rifle","shotgun","revolver","gun in the house","has a gun"]
         hits = 0
         # journals
         js = db.query(models.Journal).filter(and_(models.Journal.user_id==user_id, models.Journal.created_at>=window)).all()

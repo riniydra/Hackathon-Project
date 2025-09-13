@@ -2,7 +2,7 @@ weights:
   mood_drop_7d: 0.25
   safety_low: 0.35
   negative_language: 0.20
-  missed_checkins: 0.10
+  missed_checkins: 0.0
   game_telemetry_stress: 0.10
   chat_negative_language: 0.30
   suicidality: 3.0
