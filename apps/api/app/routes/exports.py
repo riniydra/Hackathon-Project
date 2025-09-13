@@ -142,7 +142,7 @@ class DataExporter:
             "journal_count": len(journals),
             "export_date": today
         }
-
+    
     # New: per-dataset JSON/CSV exports aligned with Data Cloud schema
     def stream_chat_events_csv(self, db: Session, user_id: str) -> Iterable[str]:
         user_hash = user_id_hash(user_id)

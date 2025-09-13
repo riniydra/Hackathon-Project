@@ -18,8 +18,7 @@ app.add_middleware(
 )
 
 # session cookie
-app.add_middleware(SessionMiddleware, secret_key=settings.APP_ENC_KEY, same_site="lax", https_only=False, max_age=1209600)
-
+app.add_middleware(SessionMiddleware, secret_key=settings.APP_ENC_KEY, same_site="none", https_only=True, max_age=1209600)
 # create tables
 Base.metadata.create_all(bind=engine)
 

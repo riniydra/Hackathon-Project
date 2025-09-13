@@ -7,9 +7,9 @@ interface RiskData {
   score: number;
   level: string;
   reasons: string[];
-  feature_scores: Record<string, number>;
-  weights: Record<string, number>;
-  thresholds: Record<string, number>;
+  feature_scores?: Record<string, number>;
+  weights?: Record<string, number>;
+  thresholds?: Record<string, number>;
 }
 
 interface ExportData {
@@ -38,10 +38,18 @@ const InsightsPanel = forwardRef<InsightsPanelRef>((props, ref) => {
     setRiskLoading(true);
     try {
       const data = await getRiskScore();
-      setRiskData(data);
+      const normalized: RiskData = {
+        score: typeof data?.score === "number" ? data.score : 0,
+        level: data?.level || "demo",
+        reasons: Array.isArray(data?.reasons) ? data.reasons : [],
+        feature_scores: data?.feature_scores || {},
+        weights: data?.weights || {},
+        thresholds: data?.thresholds || {},
+      };
+      setRiskData(normalized);
       const now = Date.now();
       setLastUpdated(new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-      setHistory(h => ([...h, { ts: now, score: data?.score ?? 0 }]).slice(-10));
+      setHistory(h => ([...h, { ts: now, score: normalized.score }]).slice(-10));
     } catch (e: any) {
       setError("Failed to load risk data");
     } finally {
@@ -191,22 +199,22 @@ const InsightsPanel = forwardRef<InsightsPanelRef>((props, ref) => {
             </div>
           </div>
           
-          {riskData.reasons.length > 0 && (
+          {(riskData?.reasons?.length || 0) > 0 && (
             <div>
               <div style={{fontWeight:"bold", marginBottom:8}}>Factors:</div>
               <ul style={{margin:0, paddingLeft:20}}>
-                {riskData.reasons.map((reason, i) => (
+                {(riskData?.reasons || []).map((reason, i) => (
                   <li key={i} style={{marginBottom:4}}>{reason}</li>
                 ))}
               </ul>
             </div>
           )}
           
-          {Object.keys(riskData.feature_scores).length > 0 && (
+          {Object.keys(riskData.feature_scores || {}).length > 0 && (
             <div>
               <div style={{fontWeight:"bold", marginBottom:8}}>Feature Scores:</div>
               <div style={{display:"grid", gap:6}}>
-                {Object.entries(riskData.feature_scores).map(([feature, score]) => {
+                {Object.entries(riskData.feature_scores || {}).map(([feature, score]) => {
                   const pct = Math.max(0, Math.min(100, Math.round(score*100)));
                   return (
                     <div key={feature}>
