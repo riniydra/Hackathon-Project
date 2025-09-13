@@ -126,7 +126,8 @@ const InsightsPanel = forwardRef<InsightsPanelRef>((props, ref) => {
   const barColorForFeature = (feature: string, level: string, weights?: Record<string, number>) => {
     const w = weights?.[feature] ?? 0;
     if (w < 0) return '#16a34a'; // green for protective
-    return level === 'high' ? '#dc2626' : level === 'warn' ? '#ea580c' : colors.skyDark;
+    // For non-protective features, use a fixed risk palette; not overall level
+    return '#dc2626';
   };
 
   const getRiskLevelLabel = (level: string) => {

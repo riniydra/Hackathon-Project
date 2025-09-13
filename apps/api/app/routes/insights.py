@@ -58,14 +58,17 @@ class RiskEvaluator:
                 reasons.append(reason)
         
         # Calculate weighted score; allow protective (negative weight) features
+        # Normalize ONLY by the weights of features that actually produced a signal (score > 0),
+        # so a single strong indicator (e.g., suicidality) is not diluted by unrelated features.
         risk_sum = 0.0
         weight_sum = 0.0
         for feature_name, score in feature_scores.items():
             weight = float(self.weights.get(feature_name, 0.0))
-            risk_sum += score * weight
-            weight_sum += abs(weight)
+            if score and score > 0:
+                risk_sum += score * weight
+                weight_sum += abs(weight)
 
-        # Normalize by sum of absolute weights and clamp 0..1
+        # Normalize by active weights and clamp 0..1
         final_score = (risk_sum / weight_sum) if weight_sum > 0 else 0.0
         final_score = max(0.0, min(1.0, final_score))
         
@@ -210,7 +213,8 @@ class RiskEvaluator:
         phrases = [
             'kill myself','end my life','i want to die','want to die','suicide',
             'take my life','i am going to kill myself','end it all','no reason to live',
-            'i want to end it','i can\'t go on','i don\'t want to live','die by suicide'
+            'i want to end it','i can\'t go on','i don\'t want to live','die by suicide',
+            'end myself','going to end myself','end myself tonight'
         ]
 
         # Check journals
