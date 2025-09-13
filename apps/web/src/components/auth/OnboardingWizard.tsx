@@ -146,11 +146,11 @@ export default function OnboardingWizard({ open, onClose, initialStep = 0 }: { o
           <section style={{display:"grid", gap:10}}>
             <h2 id="onboarding-title" style={{marginTop:0}}>Create PIN</h2>
             <label style={{display:"grid", gap:4}}>
-              <span style={{fontSize:12, opacity:.8}}>PIN (4–6 digits)</span>
+              <span style={{fontSize:12, opacity:.8}}>Duress PIN (4–6 digits)</span>
               <input inputMode="numeric" aria-invalid={!pinValid} placeholder="1234" value={pin} onChange={e=>setPinLocal(e.target.value.replace(/\D/g, ""))} />
             </label>
             <label style={{display:"grid", gap:4}}>
-              <span style={{fontSize:12, opacity:.8}}>Duress PIN (optional)</span>
+              <span style={{fontSize:12, opacity:.8}}>Confirm Duress PIN</span>
               <input inputMode="numeric" aria-invalid={!duressValid} placeholder="Optional" value={duressPin} onChange={e=>setDuressPin(e.target.value.replace(/\D/g, ""))} />
             </label>
             {error && <div role="alert" style={{color:"#b91c1c", fontSize:12}}>{error}</div>}
@@ -230,7 +230,6 @@ export default function OnboardingWizard({ open, onClose, initialStep = 0 }: { o
         {step === 4 && (
           <section style={{display:"grid", gap:10}}>
             <h2 id="onboarding-title" style={{marginTop:0}}>You’re all set</h2>
-            <p>Your preferences are saved. You can update them anytime in the profile tab.</p>
             <div style={{display:"flex", justifyContent:"flex-end", gap:8}}>
               <button onClick={done}>Close</button>
             </div>
