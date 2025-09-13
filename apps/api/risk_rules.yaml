@@ -10,9 +10,9 @@ weights:
   stalking_indicator: 0.6
   digital_surveillance_indicator: 0.5
   # Protective features use negative weights to reduce risk
-  positive_affect_7d: -0.15
-  chat_positive_affect: -0.10
-  safety_planning_intent: -0.10
+  positive_affect_7d: -0.25
+  chat_positive_affect: -0.20
+  safety_planning_intent: -0.20
   # Long-horizon and trend features
   journal_neg_30d: 0.20
   chat_neg_30d: 0.20

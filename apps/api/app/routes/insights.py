@@ -187,7 +187,7 @@ class RiskEvaluator:
         ).all()
         if not recent:
             return 0.0, None
-        pos_words = ['grateful','thankful','calm','safe','relief','supported','hopeful','optimistic','better','improving','progress']
+        pos_words = ['grateful','thankful','calm','safe','relief','supported','hopeful','optimistic','better','improving','progress','peaceful','encouraged','proud']
         hits = 0
         total = 0
         for j in recent:
@@ -198,9 +198,9 @@ class RiskEvaluator:
             except Exception:
                 continue
         ratio = hits / max(1, total)
-        if ratio >= 0.2:
+        if ratio >= 0.15:
             return 0.8, "positive affect present in journals"
-        if ratio >= 0.1:
+        if ratio >= 0.05:
             return 0.5, "some positive affect in journals"
         return 0.0, None
 
@@ -432,23 +432,43 @@ class RiskEvaluator:
         return score, ", ".join(reasons) if reasons else None
 
     def _evaluate_chat_positive_affect(self, db: Session, user_id: str) -> tuple[float, Optional[str]]:
-        """Positive affect in chat messages; reduces risk via negative weight."""
+        """Positive affect in chat messages; reduces risk via negative weight.
+        Prefer chat_events and fall back to chat_messages. Be more sensitive so
+        small but consistent positives show up.
+        """
         week_ago = datetime.utcnow() - timedelta(days=7)
-        msgs = db.query(models.ChatMessage).filter(
-            and_(
-                models.ChatMessage.user_id == user_id,
-                models.ChatMessage.created_at >= week_ago,
-                models.ChatMessage.role == 'user'
-            )
-        ).all()
-        if not msgs:
-            return 0.0, None
-        pos_vals = [float(m.sentiment_score) for m in msgs if m.sentiment_score is not None and m.sentiment_score > 0]
+
+        # Prefer events
+        events = db.execute(sql_text(
+            """
+            SELECT sentiment_score
+            FROM chat_events
+            WHERE user_id = :uid AND created_at >= :since
+            ORDER BY created_at DESC
+            LIMIT 100
+            """
+        ), {"uid": user_id, "since": week_ago}).fetchall()
+
+        pos_vals: List[float] = []
+        if events:
+            pos_vals = [float(e[0]) for e in events if e[0] is not None and float(e[0]) > 0]
+        else:
+            msgs = db.query(models.ChatMessage).filter(
+                and_(
+                    models.ChatMessage.user_id == user_id,
+                    models.ChatMessage.created_at >= week_ago,
+                    models.ChatMessage.role == 'user'
+                )
+            ).all()
+            pos_vals = [float(m.sentiment_score) for m in msgs if m.sentiment_score is not None and float(m.sentiment_score) > 0]
+
         if not pos_vals:
             return 0.0, None
+
         avg_pos = sum(pos_vals) / len(pos_vals)
+        # Map average positive sentiment (0..1) into a score; allow small signals
         score = min(1.0, max(0.0, avg_pos))
-        if score >= 0.3:
+        if score >= 0.1:
             return score, "positive affect in chat"
         return 0.0, None
 
@@ -477,9 +497,8 @@ class RiskEvaluator:
     
     def _evaluate_missed_checkins(self, db: Session, user_id: str) -> tuple[float, Optional[str]]:
         """Evaluate missed check-ins"""
-        # For MVP, we'll use a placeholder
-        # In production, this would check actual check-in data
-        return 0.1, "Check-in pattern appears regular (placeholder evaluation)"
+        # Placeholder disabled until real check-in data is implemented
+        return 0.0, None
     
     def _evaluate_game_stress(self, db: Session, user_id: str) -> tuple[float, Optional[str]]:
         """Evaluate stress indicators from game telemetry"""
