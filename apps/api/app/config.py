@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     # Data Cloud Streaming API
     DATA_CLOUD_STREAMING_ENABLED: bool = Field(default=False)
     DATA_CLOUD_ENDPOINT: str = Field(default="")
+    # Optional: dataset-specific full URLs (override default endpoint/path)
+    DATA_CLOUD_CHAT_EVENTS_URL: str = Field(default="")
+    DATA_CLOUD_RISK_SNAPSHOTS_URL: str = Field(default="")
 
     # Load .env from the apps/api directory regardless of current working dir
     model_config = SettingsConfigDict(

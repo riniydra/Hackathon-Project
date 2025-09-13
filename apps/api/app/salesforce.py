@@ -98,12 +98,9 @@ class DataCloudClient:
                 'Content-Type': 'application/json'
             }
             
-            response = requests.post(
-                f"{self.streaming_endpoint}/chat_events",
-                headers=headers,
-                json=payload,
-                timeout=10
-            )
+            url = settings.DATA_CLOUD_CHAT_EVENTS_URL or f"{self.streaming_endpoint}/chat_events"
+            body = {"data": [payload]} if "/ingest/" in url else payload
+            response = requests.post(url, headers=headers, json=body, timeout=15)
             
             if 200 <= response.status_code < 300:
                 print(f"Successfully streamed event {payload.get('event_id')} (status {response.status_code})")
@@ -136,12 +133,9 @@ class DataCloudClient:
                 'Content-Type': 'application/json'
             }
             
-            response = requests.post(
-                f"{self.streaming_endpoint}/risk_snapshots",
-                headers=headers,
-                json=payload,
-                timeout=10
-            )
+            url = settings.DATA_CLOUD_RISK_SNAPSHOTS_URL or f"{self.streaming_endpoint}/risk_snapshots"
+            body = {"data": [payload]} if "/ingest/" in url else payload
+            response = requests.post(url, headers=headers, json=body, timeout=15)
             
             if 200 <= response.status_code < 300:
                 print(f"Successfully streamed risk snapshot (status {response.status_code})")
