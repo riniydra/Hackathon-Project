@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useImperativeHandle, forwardRef, useRef } from "react";
-import { getRiskScore, exportTableau, exportFullData, listExports } from "@/lib/api";
+import { getRiskScore, listExports } from "@/lib/api";
 import { colors } from "@/components/theme/tokens";
 
 interface RiskData {
@@ -71,27 +71,39 @@ const InsightsPanel = forwardRef<InsightsPanelRef>((props, ref) => {
     refreshRiskData: loadRiskData
   }));
 
-  async function handleExportTableau() {
-    setLoading(true);
+  async function handleDownloadPDF() {
     try {
-      const result = await exportTableau();
-      console.log("Tableau export created:", result);
-      await loadExports(); // Refresh exports list
-    } catch (e: any) {
-      setError("Failed to create Tableau export");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleExportFull() {
-    setLoading(true);
-    try {
-      const result = await exportFullData();
-      console.log("Full export created:", result);
-      await loadExports(); // Refresh exports list
-    } catch (e: any) {
-      setError("Failed to create full export");
+      setLoading(true);
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+        import("html2canvas"),
+        import("jspdf") as any,
+      ]);
+      const container = document.querySelector('#risk-panel-print') as HTMLElement | null;
+      if (!container) return;
+      const canvas = await html2canvas(container, { scale: 2, backgroundColor: "#ffffff" });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = pageWidth - 48; // margins
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let y = 24;
+      if (imgHeight <= pageHeight - 48) {
+        pdf.addImage(imgData, 'PNG', 24, y, imgWidth, imgHeight);
+      } else {
+        // paginate
+        let remaining = imgHeight;
+        let imgY = 0;
+        while (remaining > 0) {
+          pdf.addImage(imgData, 'PNG', 24, y, imgWidth, Math.min(remaining, pageHeight - 48),  undefined, 'FAST');
+          remaining -= (pageHeight - 48);
+          imgY += (pageHeight - 48);
+          if (remaining > 0) pdf.addPage();
+        }
+      }
+      pdf.save('risk_report.pdf');
+    } catch (e) {
+      setError('Failed to generate PDF');
     } finally {
       setLoading(false);
     }
@@ -165,7 +177,7 @@ const InsightsPanel = forwardRef<InsightsPanelRef>((props, ref) => {
       </div>
       
       {riskData ? (
-        <div style={{display:"grid", gap:12, padding:16, border:`1px solid ${colors.border}`, borderRadius:24, background:"var(--rs-card-bg)", boxShadow:'var(--rs-shadow)'}}>
+        <div id="risk-panel-print" style={{display:"grid", gap:12, padding:16, border:`1px solid ${colors.border}`, borderRadius:24, background:"var(--rs-card-bg)", boxShadow:'var(--rs-shadow)'}}>
           <div style={{display:"flex", alignItems:"center", gap:16}}>
             <div style={{position:"relative", width:64, height:64}} aria-label="Risk score donut">
               <svg width="64" height="64" viewBox="0 0 42 42">
@@ -245,23 +257,12 @@ const InsightsPanel = forwardRef<InsightsPanelRef>((props, ref) => {
         </div>
       )}
 
-      <h3>Data Export</h3>
-      
-      <div style={{display:"grid", gap:8}}>
-        <button 
-          onClick={handleExportTableau} 
-          disabled={loading}
-          style={{padding:"8px 16px", border:"1px solid #d1d5db", borderRadius:4, backgroundColor:"#f9fafb"}}
-        >
-          {loading ? "Creating..." : "Export for Tableau"}
-        </button>
-        
-        <button 
-          onClick={handleExportFull} 
-          disabled={loading}
-          style={{padding:"8px 16px", border:"1px solid #d1d5db", borderRadius:4, backgroundColor:"#f9fafb"}}
-        >
-          {loading ? "Creating..." : "Export Full Data"}
+      <div style={{display:"flex", justifyContent:"flex-start"}}>
+        <button onClick={handleDownloadPDF} disabled={loading} style={{
+          padding:"8px 16px", border:"1px solid #d1d5db", borderRadius:8,
+          backgroundColor:"#eef2ff", color:"#111827", cursor: loading? 'not-allowed':'pointer'
+        }}>
+          {loading ? "Preparing PDF..." : "Download PDF"}
         </button>
       </div>
 
