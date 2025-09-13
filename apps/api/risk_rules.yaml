@@ -6,6 +6,9 @@ weights:
   game_telemetry_stress: 0.10
   chat_negative_language: 0.30
   suicidality: 3.0
+  weapon_indicator: 1.2
+  stalking_indicator: 0.6
+  digital_surveillance_indicator: 0.5
   # Protective features use negative weights to reduce risk
   positive_affect_7d: -0.15
   chat_positive_affect: -0.10
@@ -26,6 +29,9 @@ features:
   game_telemetry_stress: "breath_irregularity >= 0.6"
   chat_negative_language: "chat.nlp.negative >= 0.2"
   suicidality: "any(self_harm_phrases)"
+  weapon_indicator: "any(weapon_phrases)"
+  stalking_indicator: "any(stalking_phrases)"
+  digital_surveillance_indicator: "any(surveillance_phrases)"
   positive_affect_7d: "avg(journal.positive, 7d) >= 0.1"
   chat_positive_affect: "avg(chat.positive, 7d) >= 0.1"
   safety_planning_intent: "intent.safety_planning >= 0.1"

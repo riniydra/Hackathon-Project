@@ -112,6 +112,12 @@ class RiskEvaluator:
                 return self._evaluate_worsening_vs_baseline(db, user_id)
             elif feature_name == "suicidality_sticky":
                 return self._evaluate_suicidality_sticky(db, user_id)
+            elif feature_name == "weapon_indicator":
+                return self._evaluate_weapon_indicator(db, user_id)
+            elif feature_name == "stalking_indicator":
+                return self._evaluate_simple_phrase_indicator(db, user_id, ["stalking","follows me","shows up","waiting outside","keeps appearing"], label="stalking indicators")
+            elif feature_name == "digital_surveillance_indicator":
+                return self._evaluate_simple_phrase_indicator(db, user_id, ["spyware","installed app","tracking app","location sharing","screen mirroring","phone monitored","passwords demanded"], label="digital surveillance indicators")
             else:
                 return 0.0, f"Unknown feature: {feature_name}"
         except Exception as e:
@@ -244,6 +250,59 @@ class RiskEvaluator:
         score = min(1.0, 0.8 + 0.1 * (total - 1))
         reason = "explicit self-harm language detected"
         return score, reason
+
+    def _evaluate_weapon_indicator(self, db: Session, user_id: str) -> tuple[float, Optional[str]]:
+        """Detect weapon presence in journals or chat within 30 days (e.g., 'gun', 'knife', 'weapon')."""
+        window = datetime.utcnow() - timedelta(days=30)
+        words = ["gun","knife","weapon","armed","pistol","rifle","shotgun","revolver"]
+        hits = 0
+        # journals
+        js = db.query(models.Journal).filter(and_(models.Journal.user_id==user_id, models.Journal.created_at>=window)).all()
+        for j in js:
+            try:
+                t = decrypt_text(j.ciphertext_b64, j.iv_b64).lower()
+                if any(w in t for w in words):
+                    hits += 1
+            except Exception:
+                pass
+        # chat (user)
+        cs = db.query(models.ChatMessage).filter(and_(models.ChatMessage.user_id==user_id, models.ChatMessage.created_at>=window, models.ChatMessage.role=='user')).all()
+        for m in cs:
+            try:
+                t = decrypt_text(m.ciphertext_b64, m.iv_b64).lower()
+                if any(w in t for w in words):
+                    hits += 1
+            except Exception:
+                pass
+        if hits == 0:
+            return 0.0, None
+        score = min(1.0, 0.6 + 0.1*(hits-1))
+        return score, "weapon indicators mentioned"
+
+    def _evaluate_simple_phrase_indicator(self, db: Session, user_id: str, phrases: list[str], label: str) -> tuple[float, Optional[str]]:
+        """Generic indicator for journals+chat with modest weight; returns moderate score when phrases found."""
+        window = datetime.utcnow() - timedelta(days=30)
+        hits = 0
+        js = db.query(models.Journal).filter(and_(models.Journal.user_id==user_id, models.Journal.created_at>=window)).all()
+        for j in js:
+            try:
+                t = decrypt_text(j.ciphertext_b64, j.iv_b64).lower()
+                if any(p in t for p in phrases):
+                    hits += 1
+            except Exception:
+                pass
+        cs = db.query(models.ChatMessage).filter(and_(models.ChatMessage.user_id==user_id, models.ChatMessage.created_at>=window, models.ChatMessage.role=='user')).all()
+        for m in cs:
+            try:
+                t = decrypt_text(m.ciphertext_b64, m.iv_b64).lower()
+                if any(p in t for p in phrases):
+                    hits += 1
+            except Exception:
+                pass
+        if hits == 0:
+            return 0.0, None
+        score = min(1.0, 0.4 + 0.1*(hits-1))
+        return score, label
     
     def _evaluate_safety_low(self, db: Session, user_id: str) -> tuple[float, Optional[str]]:
         """Evaluate if safety level is low"""
