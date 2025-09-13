@@ -105,13 +105,13 @@ components:
           type: number
         level:
           type: string
-          enum: [low, warn, high, demo]
+          enum: [low, medium, high, demo]
         top_reasons:
           type: string
           description: Comma-separated top factors
         feature_scores:
-          type: object
-          description: JSON object of feature->score
+          type: string
+          description: JSON string of feature->score (map), e.g. {"chat_neg_30d":0.12}
 
     journals_public:
       type: object

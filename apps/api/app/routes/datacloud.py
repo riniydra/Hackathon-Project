@@ -8,6 +8,7 @@ from ..db import get_db
 from ..auth import get_current_user_id
 from ..salesforce import data_cloud_client
 from ..utils.ids import user_id_hash
+from ..config import settings
 
 router = APIRouter()
 
@@ -96,6 +97,6 @@ def datacloud_status():
     """Check Data Cloud connection status"""
     return {
         "authenticated": data_cloud_client.sf is not None,
-        "streaming_enabled": data_cloud_client.sf is not None and settings.DATA_CLOUD_STREAMING_ENABLED,
+        "streaming_enabled": bool(data_cloud_client.sf) and bool(getattr(settings, "DATA_CLOUD_STREAMING_ENABLED", False)),
         "endpoint": data_cloud_client.streaming_endpoint
     }

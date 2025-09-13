@@ -4,6 +4,9 @@ import json
 import requests
 from typing import Dict, List, Any, Optional
 from simple_salesforce import Salesforce
+import time
+import base64
+import jwt  # PyJWT
 from datetime import datetime
 from .config import settings
 from .utils.ids import user_id_hash
@@ -12,32 +15,72 @@ class DataCloudClient:
     def __init__(self):
         self.sf = None
         self.streaming_endpoint = None
+        self.access_token = None
+        self.instance_url = None
         
     def authenticate(self) -> bool:
-        """Authenticate with Salesforce using username/password flow"""
+        """Authenticate with Salesforce preferring JWT Bearer, fallback to username/password."""
         try:
-            if not all([
+            # Try JWT first if configured
+            if settings.SALESFORCE_JWT_CLIENT_ID and settings.SALESFORCE_JWT_USERNAME and settings.SALESFORCE_JWT_PRIVATE_KEY_B64:
+                if self._authenticate_jwt():
+                    self.streaming_endpoint = f"{settings.DATA_CLOUD_ENDPOINT}/api/v1/streaming"
+                    return True
+
+            # Fallback to username/password if present
+            if all([
                 settings.SALESFORCE_INSTANCE_URL,
                 settings.SALESFORCE_USERNAME,
                 settings.SALESFORCE_PASSWORD,
                 settings.SALESFORCE_SECURITY_TOKEN
             ]):
-                print("Missing Salesforce credentials")
-                return False
-                
-            self.sf = Salesforce(
-                instance_url=settings.SALESFORCE_INSTANCE_URL,
-                username=settings.SALESFORCE_USERNAME,
-                password=settings.SALESFORCE_PASSWORD,
-                security_token=settings.SALESFORCE_SECURITY_TOKEN
-            )
+                self.sf = Salesforce(
+                    instance_url=settings.SALESFORCE_INSTANCE_URL,
+                    username=settings.SALESFORCE_USERNAME,
+                    password=settings.SALESFORCE_PASSWORD,
+                    security_token=settings.SALESFORCE_SECURITY_TOKEN
+                )
+                self.access_token = self.sf.session_id
+                self.instance_url = settings.SALESFORCE_INSTANCE_URL
+                self.streaming_endpoint = f"{settings.DATA_CLOUD_ENDPOINT}/api/v1/streaming"
+                return True
             
-            # Set up streaming endpoint
-            self.streaming_endpoint = f"{settings.DATA_CLOUD_ENDPOINT}/api/v1/streaming"
-            return True
+            print("Missing Salesforce credentials for JWT and username/password")
+            return False
             
         except Exception as e:
             print(f"Salesforce authentication failed: {e}")
+            return False
+
+    def _authenticate_jwt(self) -> bool:
+        try:
+            # Build and sign JWT assertion
+            now = int(time.time())
+            exp = now + 3 * 60  # 3 minutes
+            payload = {
+                "iss": settings.SALESFORCE_JWT_CLIENT_ID,
+                "sub": settings.SALESFORCE_JWT_USERNAME,
+                "aud": settings.SALESFORCE_JWT_AUDIENCE or "https://login.salesforce.com",
+                "exp": exp,
+            }
+            private_key_pem = base64.b64decode(settings.SALESFORCE_JWT_PRIVATE_KEY_B64)
+            assertion = jwt.encode(payload, private_key_pem, algorithm="RS256")
+
+            token_url = (settings.SALESFORCE_JWT_AUDIENCE or "https://login.salesforce.com") + "/services/oauth2/token"
+            resp = requests.post(token_url, data={
+                "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
+                "assertion": assertion,
+            }, timeout=10)
+            if resp.status_code != 200:
+                print(f"JWT token error {resp.status_code}: {resp.text}")
+                return False
+            tok = resp.json()
+            self.access_token = tok.get("access_token")
+            self.instance_url = tok.get("instance_url") or settings.SALESFORCE_INSTANCE_URL
+            self.sf = Salesforce(instance_url=self.instance_url, session_id=self.access_token)
+            return True
+        except Exception as e:
+            print(f"JWT auth exception: {e}")
             return False
     
     def stream_chat_event(self, event_data: Dict[str, Any]) -> bool:
@@ -51,7 +94,7 @@ class DataCloudClient:
             
             # Send to streaming API
             headers = {
-                'Authorization': f'Bearer {self.sf.session_id}',
+                'Authorization': f'Bearer {self.access_token or (self.sf.session_id if self.sf else "")}',
                 'Content-Type': 'application/json'
             }
             
@@ -89,7 +132,7 @@ class DataCloudClient:
             }
             
             headers = {
-                'Authorization': f'Bearer {self.sf.session_id}',
+                'Authorization': f'Bearer {self.access_token or (self.sf.session_id if self.sf else "")}',
                 'Content-Type': 'application/json'
             }
             

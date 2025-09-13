@@ -14,6 +14,11 @@ class Settings(BaseSettings):
     SALESFORCE_USERNAME: str = Field(default="")
     SALESFORCE_PASSWORD: str = Field(default="")
     SALESFORCE_SECURITY_TOKEN: str = Field(default="")
+    # JWT Bearer OAuth (preferred for server-to-server)
+    SALESFORCE_JWT_CLIENT_ID: str = Field(default="")  # Connected App Consumer Key
+    SALESFORCE_JWT_USERNAME: str = Field(default="")   # Integration User username (sub)
+    SALESFORCE_JWT_AUDIENCE: str = Field(default="https://login.salesforce.com")  # or https://test.salesforce.com
+    SALESFORCE_JWT_PRIVATE_KEY_B64: str = Field(default="")  # Base64-encoded PEM private key
     
     # Data Cloud Streaming API
     DATA_CLOUD_STREAMING_ENABLED: bool = Field(default=False)
