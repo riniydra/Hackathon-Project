@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { signup, login, setPin, updateProfile } from "@/lib/api";
 
 export default function OnboardingWizard({ open, onClose, initialStep = 0 }: { open:boolean; onClose:()=>void; initialStep?: number }) {
@@ -29,13 +29,13 @@ export default function OnboardingWizard({ open, onClose, initialStep = 0 }: { o
 
   if (!open) return null;
 
-  const steps = useMemo(() => [
+  const steps = [
     { key: 0, label: "Welcome" },
     { key: 1, label: "Account" },
     { key: 2, label: "PIN" },
     { key: 3, label: "Profile" },
     { key: 4, label: "Finish" },
-  ], []);
+  ];
 
   const emailValid = /.+@.+\..+/.test(email);
   const passwordValid = password.length >= 8;
