@@ -105,8 +105,8 @@ class DataCloudClient:
                 timeout=10
             )
             
-            if response.status_code == 200:
-                print(f"Successfully streamed event {payload.get('event_id')}")
+            if 200 <= response.status_code < 300:
+                print(f"Successfully streamed event {payload.get('event_id')} (status {response.status_code})")
                 return True
             else:
                 print(f"Streaming failed: {response.status_code} - {response.text}")
@@ -143,7 +143,12 @@ class DataCloudClient:
                 timeout=10
             )
             
-            return response.status_code == 200
+            if 200 <= response.status_code < 300:
+                print(f"Successfully streamed risk snapshot (status {response.status_code})")
+                return True
+            else:
+                print(f"Error streaming risk snapshot: {response.status_code} - {response.text}")
+                return False
             
         except Exception as e:
             print(f"Error streaming risk snapshot: {e}")
