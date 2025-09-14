@@ -148,16 +148,20 @@ export default function OnboardingWizard({ open, onClose, initialStep = 0 }: { o
 
         {step === 2 && (
           <section style={{display:"grid", gap:10}}>
-            <h2 id="onboarding-title" style={{marginTop:0}}>Create PINs</h2>
-            <label style={{display:"grid", gap:4}}>
-              <span style={{fontSize:12, opacity:.8}}>PIN (4–6 digits)</span>
-              <input inputMode="numeric" aria-invalid={!pinValid} placeholder="Primary PIN" value={pin} onChange={e=>setPinLocal(e.target.value.replace(/\D/g, ""))} />
-              <span style={{fontSize:12, opacity:.7}}>Use this to unhide and access your real data.</span>
+            <h2 id="onboarding-title" style={{marginTop:0}}>Create your security PINs</h2>
+            <label style={{display:"grid", gap:6}}>
+              <span style={{fontSize:12, opacity:.8}}>Primary PIN (4–6 digits)</span>
+              <input inputMode="numeric" aria-invalid={!pinValid} placeholder="e.g. 4829" value={pin} onChange={e=>setPinLocal(e.target.value.replace(/\D/g, ""))}
+                style={{padding:"10px 12px", borderRadius:8, border:"1px solid #2563eb", background:"#eff6ff"}}
+              />
+              <span style={{fontSize:12, opacity:.7}}>Use this to unhide the app and continue in your real account.</span>
             </label>
-            <label style={{display:"grid", gap:4}}>
-              <span style={{fontSize:12, opacity:.8}}>Duress PIN (optional)</span>
-              <input inputMode="numeric" aria-invalid={!duressValid || samePins} placeholder="Decoy PIN" value={duressPin} onChange={e=>setDuressPin(e.target.value.replace(/\D/g, ""))} />
-              <span style={{fontSize:12, opacity:.7}}>Entering this opens a safe decoy account. Keep it different from your PIN.</span>
+            <label style={{display:"grid", gap:6}}>
+              <span style={{fontSize:12, opacity:.8}}>Duress PIN (optional, 4–6 digits)</span>
+              <input inputMode="numeric" aria-invalid={!duressValid || samePins} placeholder="e.g. 6501" value={duressPin} onChange={e=>setDuressPin(e.target.value.replace(/\D/g, ""))}
+                style={{padding:"10px 12px", borderRadius:8, border:"1px solid #f59e0b", background:"#fff7ed"}}
+              />
+              <span style={{fontSize:12, opacity:.7}}>If you’re under pressure, entering this opens a safe decoy account. Do not reuse your Primary PIN.</span>
             </label>
             {samePins && <div role="alert" style={{color:"#b91c1c", fontSize:12}}>Duress PIN cannot be the same as your main PIN.</div>}
             {error && <div role="alert" style={{color:"#b91c1c", fontSize:12}}>{error}</div>}

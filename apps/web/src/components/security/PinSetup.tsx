@@ -28,17 +28,43 @@ export default function PinSetup() {
   }
 
   return (
-    <div style={{display:"grid", gap:8}}>
+    <div style={{display:"grid", gap:10}}>
       <h4 style={{margin:"8px 0"}}>Security PINs</h4>
-      <label style={{display:"grid", gap:4}}>
-        <span style={{fontSize:12, opacity:.8}}>PIN (4–6 digits)</span>
-        <input type="password" inputMode="numeric" placeholder="Enter PIN" value={pin} onChange={e=>setPinLocal(e.target.value.replace(/\D/g, ""))} />
-        <span style={{fontSize:12, opacity:.7}}>Use this to unhide and access your real data.</span>
+      <label style={{display:"grid", gap:6}}>
+        <span style={{fontSize:12, opacity:.8}}>Primary PIN (4–6 digits)</span>
+        <input
+          type="password"
+          inputMode="numeric"
+          placeholder="e.g. 4829"
+          value={pin}
+          onChange={e=>setPinLocal(e.target.value.replace(/\D/g, ""))}
+          style={{
+            padding:"10px 12px",
+            borderRadius:8,
+            border:"1px solid #2563eb",
+            background:"#eff6ff",
+            color:"#111"
+          }}
+        />
+        <span style={{fontSize:12, opacity:.75}}>Used to unhide the app and return to your real account.</span>
       </label>
-      <label style={{display:"grid", gap:4}}>
-        <span style={{fontSize:12, opacity:.8}}>Duress PIN (optional)</span>
-        <input type="password" inputMode="numeric" placeholder="Enter duress PIN" value={duress} onChange={e=>setDuress(e.target.value.replace(/\D/g, ""))} />
-        <span style={{fontSize:12, opacity:.7}}>Entering this opens a safe decoy account. Keep it different from your PIN.</span>
+      <label style={{display:"grid", gap:6}}>
+        <span style={{fontSize:12, opacity:.8}}>Duress PIN (optional, 4–6 digits)</span>
+        <input
+          type="password"
+          inputMode="numeric"
+          placeholder="e.g. 6501"
+          value={duress}
+          onChange={e=>setDuress(e.target.value.replace(/\D/g, ""))}
+          style={{
+            padding:"10px 12px",
+            borderRadius:8,
+            border:"1px solid #f59e0b",
+            background:"#fff7ed",
+            color:"#111"
+          }}
+        />
+        <span style={{fontSize:12, opacity:.75}}>If someone is watching, this opens a safe decoy account. Do not reuse your Primary PIN.</span>
       </label>
       {samePins && <div style={{color:"#b91c1c", fontSize:12}}>Duress PIN cannot be the same as your main PIN.</div>}
       <div style={{display:"flex", gap:8, alignItems:"center"}}>
