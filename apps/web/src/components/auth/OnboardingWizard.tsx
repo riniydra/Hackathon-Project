@@ -41,6 +41,7 @@ export default function OnboardingWizard({ open, onClose, initialStep = 0 }: { o
   const passwordValid = password.length >= 8;
   const pinValid = pin.length >= 4 && pin.length <= 6;
   const duressValid = duressPin === "" || (duressPin.length >= 4 && duressPin.length <= 6);
+  const samePins = pin && duressPin && pin === duressPin;
   const ageValid = age === "" || (+age >= 13 && +age <= 120);
   const childrenValid = children === "" || (+children >= 0 && Number.isFinite(+children));
 
@@ -60,7 +61,10 @@ export default function OnboardingWizard({ open, onClose, initialStep = 0 }: { o
         await login(email, password);
       }
       if (step === 2) {
-        if (!pinValid || !duressValid) return;
+        if (!pinValid || !duressValid || samePins) {
+          setError(samePins ? "Duress PIN must differ from your PIN" : undefined);
+          return;
+        }
         await setPin(pin, duressPin || undefined);
       }
       if (step === 3) {
@@ -144,15 +148,18 @@ export default function OnboardingWizard({ open, onClose, initialStep = 0 }: { o
 
         {step === 2 && (
           <section style={{display:"grid", gap:10}}>
-            <h2 id="onboarding-title" style={{marginTop:0}}>Create PIN</h2>
+            <h2 id="onboarding-title" style={{marginTop:0}}>Create PINs</h2>
             <label style={{display:"grid", gap:4}}>
-              <span style={{fontSize:12, opacity:.8}}>Duress PIN (4–6 digits)</span>
-              <input inputMode="numeric" aria-invalid={!pinValid} placeholder="1234" value={pin} onChange={e=>setPinLocal(e.target.value.replace(/\D/g, ""))} />
+              <span style={{fontSize:12, opacity:.8}}>PIN (4–6 digits)</span>
+              <input inputMode="numeric" aria-invalid={!pinValid} placeholder="Primary PIN" value={pin} onChange={e=>setPinLocal(e.target.value.replace(/\D/g, ""))} />
+              <span style={{fontSize:12, opacity:.7}}>Use this to unhide and access your real data.</span>
             </label>
             <label style={{display:"grid", gap:4}}>
-              <span style={{fontSize:12, opacity:.8}}>Confirm Duress PIN</span>
-              <input inputMode="numeric" aria-invalid={!duressValid} placeholder="Optional" value={duressPin} onChange={e=>setDuressPin(e.target.value.replace(/\D/g, ""))} />
+              <span style={{fontSize:12, opacity:.8}}>Duress PIN (optional)</span>
+              <input inputMode="numeric" aria-invalid={!duressValid || samePins} placeholder="Decoy PIN" value={duressPin} onChange={e=>setDuressPin(e.target.value.replace(/\D/g, ""))} />
+              <span style={{fontSize:12, opacity:.7}}>Entering this opens a safe decoy account. Keep it different from your PIN.</span>
             </label>
+            {samePins && <div role="alert" style={{color:"#b91c1c", fontSize:12}}>Duress PIN cannot be the same as your main PIN.</div>}
             {error && <div role="alert" style={{color:"#b91c1c", fontSize:12}}>{error}</div>}
             <div style={{display:"flex", justifyContent:"space-between"}}>
               <button onClick={back} disabled={loading}>Back</button>
