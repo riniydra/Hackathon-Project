@@ -51,7 +51,7 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
       }
     })();
 
-    function onKeyDown(e: KeyboardEvent) {
+    async function onKeyDown(e: KeyboardEvent) {
       const key = typeof (e as any)?.key === "string" ? (e as any).key.toLowerCase() : "";
       const isEsc = key === "escape";
       const isCmdDot = (e.metaKey || e.ctrlKey) && key === ".";
@@ -86,7 +86,19 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
         e.preventDefault();
         setMenuOpen(false);
         setUiMode("game");
-        if (authed) {
+        // Re-check auth at the moment of ESC to reflect recent logins
+        let isAuthed = authed;
+        if (!isAuthed) {
+          try {
+            const who = await me();
+            isAuthed = !!who?.user_id && who.user_id !== "demo";
+            setAuthed(isAuthed);
+          } catch {
+            isAuthed = false;
+          }
+        }
+
+        if (isAuthed) {
           setHidden(prev => (prev === "visible" ? "hidden" : prev === "hidden" ? "pin" : "pin"));
         } else {
           // For unsigned users, toggle only between visible/hidden; do not show PIN prompt
