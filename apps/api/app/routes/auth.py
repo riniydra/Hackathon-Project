@@ -71,6 +71,8 @@ class VerifyPinPayload(BaseModel):
 def set_pin(payload: SetPinPayload, user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
     if user_id == "demo":
         raise HTTPException(status_code=401, detail="Login required")
+    if payload.duress_pin and payload.duress_pin == payload.pin:
+        raise HTTPException(status_code=400, detail="Duress PIN cannot be the same as PIN")
     user = db.query(models.User).filter(models.User.id == int(user_id)).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -89,12 +91,14 @@ def verify_pin(payload: VerifyPinPayload, request: Request, user_id: str = Depen
     user = db.query(models.User).filter(models.User.id == int(user_id)).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    # Prefer normal PIN verification first
+    if user.pin_hash and verify_password(payload.pin, user.pin_hash):
+        return {"ok": True}
+    # If normal PIN didn't match, check duress
     if user.duress_pin_hash and verify_password(payload.pin, user.duress_pin_hash):
         # Clear session and set to demo decoy
         set_session_user(request, "demo")
         return {"ok": True, "duress": True}
-    if user.pin_hash and verify_password(payload.pin, user.pin_hash):
-        return {"ok": True}
     raise HTTPException(status_code=401, detail="Invalid PIN")
 
 
