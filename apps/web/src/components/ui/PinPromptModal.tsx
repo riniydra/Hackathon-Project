@@ -24,11 +24,8 @@ export default function PinPromptModal() {
   }
 
   function press(n: number) {
-    const next = (pin + String(n)).slice(0, 6);
+    const next = (pin + String(n)).slice(0, 6); // allow up to 6 digits
     setPin(next);
-    if (next.length >= 4) {
-      attemptVerify(next);
-    }
   }
 
   return (
@@ -52,6 +49,10 @@ export default function PinPromptModal() {
           <div />
           <Key label="0" onClick={()=>press(0)} />
           <Key label="←" onClick={()=> setPin(p=>p.slice(0,-1))} />
+        </div>
+        <div style={{display:"flex", gap:8, marginTop:12, justifyContent:"flex-end"}}>
+          <button onClick={()=>setPin("")} style={{padding:"8px 12px", borderRadius:8, border:"1px solid rgba(255,255,255,.3)", background:"transparent", color:"#fff"}}>Clear</button>
+          <button onClick={()=>attemptVerify(pin)} disabled={pin.length < 4} style={{padding:"8px 12px", borderRadius:8, border:"1px solid rgba(255,255,255,.3)", background:"#fff", color:"#111", opacity: pin.length<4? .6:1}}>Verify</button>
         </div>
       </div>
     </div>
