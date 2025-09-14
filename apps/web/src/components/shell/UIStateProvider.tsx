@@ -1,5 +1,6 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { me } from "@/lib/api";
 
 type ActiveTab = "journal" | "chat" | "risk" | "security";
 type HiddenState = "visible" | "hidden" | "pin";
@@ -23,6 +24,7 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
   const [activeTab, setActiveTab] = useState<ActiveTab>("journal");
   const [hidden, setHidden] = useState<HiddenState>("visible");
   const [uiMode, setUiMode] = useState<"game" | "overlay">("game");
+  const [authed, setAuthed] = useState<boolean>(false);
 
   const openTab = useCallback((tab: ActiveTab) => {
     setActiveTab(tab);
@@ -39,6 +41,16 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
   const showJournaling = useCallback(() => openTab("journal"), [openTab]);
 
   useEffect(() => {
+    // Check auth status once on mount
+    (async () => {
+      try {
+        const who = await me();
+        setAuthed(!!who?.user_id && who.user_id !== "demo");
+      } catch {
+        setAuthed(false);
+      }
+    })();
+
     function onKeyDown(e: KeyboardEvent) {
       const key = typeof (e as any)?.key === "string" ? (e as any).key.toLowerCase() : "";
       const isEsc = key === "escape";
@@ -74,12 +86,17 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
         e.preventDefault();
         setMenuOpen(false);
         setUiMode("game");
-        setHidden(prev => (prev === "visible" ? "hidden" : prev === "hidden" ? "pin" : "pin"));
+        if (authed) {
+          setHidden(prev => (prev === "visible" ? "hidden" : prev === "hidden" ? "pin" : "pin"));
+        } else {
+          // For unsigned users, toggle only between visible/hidden; do not show PIN prompt
+          setHidden(prev => (prev === "visible" ? "hidden" : "visible"));
+        }
       }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [openTab, showGame]);
+  }, [openTab, showGame, authed]);
 
   const value = useMemo(() => ({
     menuOpen,
