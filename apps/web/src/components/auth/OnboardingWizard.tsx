@@ -41,7 +41,7 @@ export default function OnboardingWizard({ open, onClose, initialStep = 0 }: { o
   const passwordValid = password.length >= 8;
   const pinValid = pin.length >= 4 && pin.length <= 6;
   const duressValid = duressPin === "" || (duressPin.length >= 4 && duressPin.length <= 6);
-  const samePins = pin && duressPin && pin === duressPin;
+  const samePins = (pin.length > 0 && duressPin.length > 0 && pin === duressPin);
   const ageValid = age === "" || (+age >= 13 && +age <= 120);
   const childrenValid = children === "" || (+children >= 0 && Number.isFinite(+children));
 
@@ -132,11 +132,11 @@ export default function OnboardingWizard({ open, onClose, initialStep = 0 }: { o
             <h2 id="onboarding-title" style={{marginTop:0}}>Create account</h2>
             <label style={{display:"grid", gap:4}}>
               <span style={{fontSize:12, opacity:.8}}>Email</span>
-              <input aria-invalid={!emailValid} aria-required type="email" placeholder="you@example.org" value={email} onChange={e=>setEmail(e.target.value)} />
+              <input aria-invalid={!emailValid} aria-required={true} type="email" placeholder="you@example.org" value={email} onChange={e=>setEmail(e.target.value)} />
             </label>
             <label style={{display:"grid", gap:4}}>
               <span style={{fontSize:12, opacity:.8}}>Password (min 8)</span>
-              <input aria-invalid={!passwordValid} aria-required type="password" placeholder="••••••••" value={password} onChange={e=>setPassword(e.target.value)} />
+              <input aria-invalid={!passwordValid} aria-required={true} type="password" placeholder="••••••••" value={password} onChange={e=>setPassword(e.target.value)} />
             </label>
             {error && <div role="alert" style={{color:"#b91c1c", fontSize:12}}>{error}</div>}
             <div style={{display:"flex", justifyContent:"space-between"}}>
