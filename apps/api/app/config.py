@@ -26,6 +26,8 @@ class Settings(BaseSettings):
     # Optional: dataset-specific full URLs (override default endpoint/path)
     DATA_CLOUD_CHAT_EVENTS_URL: str = Field(default="")
     DATA_CLOUD_RISK_SNAPSHOTS_URL: str = Field(default="")
+    # Troubleshooting: send only minimal required fields for chat_events
+    DATA_CLOUD_MINIMAL_PAYLOAD: bool = Field(default=False)
 
     # Load .env from the apps/api directory regardless of current working dir
     model_config = SettingsConfigDict(

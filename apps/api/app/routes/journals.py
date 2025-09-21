@@ -7,6 +7,9 @@ from ..crypto import encrypt_text, decrypt_text
 from ..nlp_utils import simple_sentiment, extract_risk_flags, calculate_risk_scores
 from sqlalchemy import text as sql_text
 from ..auth import get_current_user_id
+from ..config import settings
+from ..salesforce import data_cloud_client
+import threading
 
 # create tables on first run (simple for MVP; swap to Alembic later)
 Base.metadata.create_all(bind=engine)
@@ -82,6 +85,14 @@ def create_journal(payload: schemas.JournalCreate, db: Session = Depends(get_db)
         )
         db.execute(insert_sql, evt)
         db.commit()
+
+        # Fire-and-forget streaming to Data Cloud
+        if user_id != "demo" and getattr(settings, "DATA_CLOUD_STREAMING_ENABLED", False):
+            threading.Thread(
+                target=data_cloud_client.stream_chat_event,
+                args=(dict(evt),),
+                daemon=True
+            ).start()
     except Exception:
         db.rollback()
     return schemas.JournalOut(id=row.id, user_id=row.user_id, created_at=row.created_at, text=payload.text)

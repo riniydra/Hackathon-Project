@@ -5,6 +5,7 @@ from .routes import health, journals, auth as auth_routes, insights, exports, ch
 from .config import settings
 from .db import engine, Base
 from . import models  # noqa: F401
+from .salesforce import data_cloud_client
 
 app = FastAPI(title="DV Support API", version="0.1.0")
 
@@ -34,3 +35,15 @@ app.include_router(exports.router, prefix="/exports", tags=["exports"])
 app.include_router(chat.router, prefix="/chat", tags=["chat"])
 app.include_router(datacloud.router, prefix="/datacloud", tags=["datacloud"])
 app.include_router(seed.router, prefix="/seed", tags=["seed"])
+
+@app.on_event("startup")
+def _startup_auth_datacloud():
+    try:
+        if getattr(settings, "DATA_CLOUD_STREAMING_ENABLED", False):
+            ok = data_cloud_client.authenticate()
+            if not ok:
+                print("[DataCloud] Startup auth failed; will attempt lazy auth on first stream call.")
+            else:
+                print(f"[DataCloud] Authenticated. Endpoint: {data_cloud_client.streaming_endpoint}")
+    except Exception as e:
+        print(f"[DataCloud] Startup auth exception: {e}")

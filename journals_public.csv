@@ -1,4 +1,0 @@
-journal_id,user_id_hash,created_at,mood,tags,text_redacted
-1,5e2f18f6a8b2a6d851a11c1b,2025-09-02T19:31:44.712850+00:00,,,Short neutral summary (no PII).
-2,5e2f18f6a8b2a6d851a11c1b,2025-09-05T19:31:44.712850+00:00,,,Short neutral summary (no PII).
-3,5e2f18f6a8b2a6d851a11c1b,2025-09-08T19:31:44.712850+00:00,,,Short neutral summary (no PII).

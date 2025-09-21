@@ -138,7 +138,7 @@ Open the app at `http://127.0.0.1:3000`. The web app talks to the API at `http:/
 ### Troubleshooting (macOS)
 
 - Port busy: `lsof -i :8000` then `kill -9 <PID>`
-- Database not reachable: ensure Docker Desktop is running; `docker ps` should show `dvapp-db`
+- Database not reachable: ensure Docker Desktop is running; `docker ps` should show `dvapp-db-name`
 - Journals visible while logged out: clear browser cookies; API now returns 0 journals for unauthenticated sessions
 - CORS/cookies: prefer `127.0.0.1` for both web and API to keep hosts aligned
 
@@ -273,25 +273,120 @@ Please read the TODO.md file for detailed development roadmap and contribution g
 This project is designed for supporting individuals in need. Please use responsibly and ethically.
 
 
-## created users
-Seeded credentials (emails → passwords)
-jane.d001@example.com → Passw0rd!001
-maya.p002@example.com → Passw0rd!002
-alex.r003@example.com → Passw0rd!003
-jordan.k004@example.com → Passw0rd!004
-rosa.m005@example.com → Passw0rd!005
-liam.t006@example.com → Passw0rd!006
-priya.n007@example.com → Passw0rd!007
-sam.w008@example.com → Passw0rd!008
-aisha.l009@example.com → Passw0rd!009
-diego.s010@example.com → Passw0rd!010
-noor.c011@example.com → Passw0rd!011
-ethan.v012@example.com → Passw0rd!012
-grace.h013@example.com → Passw0rd!013
-chen.y014@example.com → Passw0rd!014
-omar.z015@example.com → Passw0rd!015
-sofia.g016@example.com → Passw0rd!016
-maria.j017@example.com → Passw0rd!017
-natalie.b018@example.com → Passw0rd!018
-tyrese.q019@example.com → Passw0rd!019
-helena.f020@example.com → Passw0rd!020
+
+```
+
+## Environment Variables (.env)
+
+Create a `.env` at the repo root (and copy into `apps/api/.env` if you run the API directly from that folder). These are safe local defaults; do NOT commit secrets.
+
+```env
+# Frontend → Backend base URL
+NEXT_PUBLIC_API_BASE=http://127.0.0.1:8000
+
+# Postgres (Docker compose uses 5433 host port)
+DB_URL=postgresql+psycopg://postgres:postgres@127.0.0.1:5433/dvapp
+
+# Encryption key (32+ chars)
+APP_ENC_KEY=dev-change-me-32-bytes-min
+
+# --- Optional: Salesforce Data Cloud (local testing) ---
+# Turn on streaming from API to Data Cloud (off by default for local dev)
+DATA_CLOUD_STREAMING_ENABLED=false
+
+# Base endpoint. Use either:
+# 1) Ingest source base (App_Data_Connector):
+# DATA_CLOUD_ENDPOINT=https://<tenant>.salesforce.com/api/v1/ingest/sources/App_Data_Connector
+# or
+# 2) Streaming base (simpler for testing):
+# DATA_CLOUD_ENDPOINT=https://<tenant>.salesforce.com
+
+# Optional: Override with full dataset URLs (recommended for clarity)
+# DATA_CLOUD_CHAT_EVENTS_URL=https://<tenant>.salesforce.com/api/v1/streaming/chat_events
+# DATA_CLOUD_RISK_SNAPSHOTS_URL=https://<tenant>.salesforce.com/api/v1/streaming/risk_snapshots
+
+# Troubleshooting: send minimal payload for chat_events
+DATA_CLOUD_MINIMAL_PAYLOAD=false
+
+# --- Salesforce auth: prefer JWT Bearer OAuth ---
+# Connected App (use Production or Sandbox audience accordingly)
+SALESFORCE_JWT_CLIENT_ID=
+SALESFORCE_JWT_USERNAME=
+SALESFORCE_JWT_AUDIENCE=https://login.salesforce.com
+# Base64-encoded PEM of the private key for the Connected App
+SALESFORCE_JWT_PRIVATE_KEY_B64=
+
+# Legacy username/password (fallback only; not recommended)
+SALESFORCE_INSTANCE_URL=
+SALESFORCE_USERNAME=
+SALESFORCE_PASSWORD=
+SALESFORCE_SECURITY_TOKEN=
+```
+
+## Salesforce Data Cloud (Local Optional)
+
+You can test streaming to Data Cloud from your local API. Steps:
+
+1) Connected App (JWT)
+- In Salesforce Setup → App Manager → New Connected App.
+- Enable OAuth settings; add these scopes:
+  - Access the identity URL service (id, profile, email, address, phone)
+  - Manage user data via APIs (api)
+- Upload your public key (Certificates for JWT) or paste the cert. Save.
+- Note Consumer Key (Client ID).
+
+2) Integration User
+- Create or pick a user; note their Username (will be `sub` in JWT).
+- Grant Data Cloud permissions to read/write your objects (`chat_events`, `risk_snapshots`, etc.).
+
+3) Generate a key pair and set env
+```bash
+# Generate RSA key pair (don’t commit these files)
+openssl genrsa -out salesforce_jwt_private.pem 2048
+openssl rsa -in salesforce_jwt_private.pem -pubout -out salesforce_jwt_public.pem
+
+# Base64-encode private key for .env
+base64 < salesforce_jwt_private.pem | tr -d '\n' > salesforce_jwt_private.pem.b64
+```
+Populate in `.env`:
+```env
+SALESFORCE_JWT_CLIENT_ID=<ConnectedApp_ConsumerKey>
+SALESFORCE_JWT_USERNAME=<integration_user_username>
+SALESFORCE_JWT_AUDIENCE=https://login.salesforce.com   # or https://test.salesforce.com
+SALESFORCE_JWT_PRIVATE_KEY_B64=<contents of salesforce_jwt_private.pem.b64>
+```
+
+4) Configure endpoints
+- EITHER set `DATA_CLOUD_ENDPOINT=https://<tenant>.salesforce.com` and rely on Streaming API paths, OR set dataset-specific full URLs:
+```env
+DATA_CLOUD_CHAT_EVENTS_URL=https://<tenant>.salesforce.com/api/v1/streaming/chat_events
+DATA_CLOUD_RISK_SNAPSHOTS_URL=https://<tenant>.salesforce.com/api/v1/streaming/risk_snapshots
+```
+- If you use the App_Data_Connector ingest URLs, ensure the objects exist in Object Manager and match field API names.
+
+5) Turn on streaming (optional for local)
+```env
+DATA_CLOUD_STREAMING_ENABLED=true
+```
+
+6) Run locally and create a journal or chat to trigger streaming. Tail API logs to see results.
+
+## Secrets Management
+
+- Local: use `.env` files that are git‑ignored. Rotate any credentials if accidentally exposed.
+- Do not commit PEM keys or `.b64` files; keep them outside the repo or in a secure secrets manager.
+
+## Data Cloud Troubleshooting
+
+- 400 on ingest:
+  - Verify object exists in Data Cloud Object Manager and field API names match.
+  - For App_Data_Connector ingest, body must be `{ "data": [ { ... } ] }` (handled by API when URL contains `/ingest/`).
+  - Ensure `created_at` is ISO 8601 with `Z` (API normalizes this).
+  - Confirm `event_id` is configured as the primary key for `chat_events` upsert.
+  - Try Streaming API endpoints instead of ingest for simpler testing.
+  - Toggle `DATA_CLOUD_MINIMAL_PAYLOAD=true` to isolate offending fields.
+- Auth errors (401/403):
+  - Re‑check JWT env vars; ensure audience matches your org (prod vs sandbox).
+  - Connected App has the cert and the integration user has required permissions.
+- Still failing:
+  - Tail logs and look for lines containing `Streaming failed` or `Error streaming` for URL/body keys.

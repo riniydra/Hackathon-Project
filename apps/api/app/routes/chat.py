@@ -17,6 +17,9 @@ from ..crypto import encrypt_text, decrypt_text
 from ..auth import get_current_user_id
 from ..nlp_utils import analyze_message, is_high_risk, get_emergency_message
 from sqlalchemy import text as sql_text
+from ..config import settings
+from ..salesforce import data_cloud_client
+import threading
 
 # Ensure tables exist
 Base.metadata.create_all(bind=engine)
@@ -281,6 +284,14 @@ def stream_chat_response(
                 )
                 db.execute(insert_sql, event_payload)
                 db.commit()
+
+                # Fire-and-forget streaming to Data Cloud
+                if user_id != "demo" and getattr(settings, "DATA_CLOUD_STREAMING_ENABLED", False):
+                    threading.Thread(
+                        target=data_cloud_client.stream_chat_event,
+                        args=(dict(event_payload),),
+                        daemon=True
+                    ).start()
             except Exception as _e:
                 # Avoid breaking chat flow if analytics write fails
                 db.rollback()
